@@ -1,4 +1,5 @@
 #include "../includes/HttpServer.hpp"
+#include <sys/fcntl.h>
 
                                     // Constructors
 HttpServer::HttpServer()
@@ -87,6 +88,17 @@ void        HttpServer::enableSockReused()
     }
 }
 
+/*This Methode Make our socket to non-blocking mode*/
+void    HttpServer::SetNonBlocking()
+{
+    int flags = fcntl(this->SockFD, F_GETFL, 0);
+    if(flags < 0 || fcntl(this->SockFD, F_SETFD, flags | O_NONBLOCK) < 0)
+    {
+        close(this->SockFD);
+        throw std::runtime_error("changing socket flags fails");
+    }
+}
+
 void    HttpServer::BindSock()
 {
     if (bind(this->SockFD, this->addr_strct->ai_addr, this->addr_strct->ai_addr->sa_len)== -1)
@@ -98,6 +110,9 @@ void    HttpServer::BindSock()
     {
         ListningFails();
     }
+    std::cout << YELLOW << "Server is Listening on [" 
+        << this->serverConfiguration->Ip << "] : [" << this->ServerPort << "]"
+            << RESET << std::endl;
 }
 /*The function initiate a socket to use it in our server ...*/
 void    HttpServer::CreatSocket()
@@ -119,6 +134,7 @@ void    HttpServer::CreatSocket()
     {
         SocCreatFails();
     }
+    SetNonBlocking();
     SetSockFd(sockFd);
     enableSockReused();
     BindSock();
