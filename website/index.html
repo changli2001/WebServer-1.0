@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Webserv Documentation</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      --frost: rgba(255, 255, 255, 0.2);
+      --border: rgba(255, 255, 255, 0.1);
+    }
+
+    html { overflow-y: scroll; scroll-behavior: smooth; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: var(--gradient);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 30px;
+      color: #fff;
+      position: relative;
+    }
+
+    .glow {
+      position: absolute;
+      width: 500px;
+      height: 500px;
+      background: rgba(255, 255, 255, 0.1);
+      filter: blur(120px);
+      top: 20%;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 0;
+    }
+
+    .container {
+      position: relative;
+      background: var(--frost);
+      backdrop-filter: blur(18px);
+      border: 1px solid var(--border);
+      padding: 50px 40px;
+      border-radius: 25px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+      max-width: 900px;
+      width: 100%;
+      z-index: 1;
+      animation: fadeInUp 1s ease-out;
+    }
+
+    h1 {
+      font-size: 2.6rem;
+      text-align: center;
+      color: #fff;
+      margin-bottom: 30px;
+      text-shadow: 1px 1px 3px rgba(0,0,0,0.3);
+    }
+
+    h2 {
+      margin-top: 40px;
+      font-size: 1.5rem;
+      color: #fff;
+      position: relative;
+    }
+
+    h2::after {
+      content: '';
+      display: block;
+      width: 50px;
+      height: 4px;
+      background: #764ba2;
+      border-radius: 5px;
+      margin-top: 10px;
+    }
+
+    p, pre, ul {
+      font-size: 1.05rem;
+      line-height: 1.7;
+      margin-top: 10px;
+      color: #f1f1f1;
+    }
+
+    code, pre {
+      background: rgba(255,255,255,0.1);
+      padding: 12px;
+      border-radius: 12px;
+      display: block;
+      overflow-x: auto;
+      font-family: monospace;
+      margin-top: 15px;
+    }
+
+    /* New class for config block with hover effect */
+    pre.config-typing {
+      transition: box-shadow 0.3s ease, filter 0.3s ease;
+      cursor: text;
+    }
+    pre.config-typing:hover {
+      box-shadow: 0 0 12px 4px rgba(118, 75, 162, 0.6);
+      filter: blur(0.8px);
+    }
+
+    ul {
+      margin-left: 25px;
+      margin-bottom: 20px;
+    }
+
+    li {
+      margin-bottom: 10px;
+    }
+
+    .btn {
+      display: block;
+      margin: 50px auto 0;
+      padding: 14px 35px;
+      background: var(--gradient);
+      color: white;
+      border: none;
+      border-radius: 30px;
+      font-weight: 600;
+      font-size: 1.1rem;
+      text-align: center;
+      cursor: pointer;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .btn:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
+    }
+
+    .animate {
+      opacity: 0;
+      transform: translateY(20px);
+      transition: all 0.6s ease-out;
+    }
+
+    .animate.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(30px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    ::-webkit-scrollbar {
+      width: 12px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f1f1;
+      border-radius: 10px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      border-radius: 10px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: linear-gradient(135deg, #5b6fee, #6a40a2);
+    }
+  </style>
+</head>
+<body>
+  <div class="glow"></div>
+  <div class="container">
+    <h1>📚 Webserv Documentation</h1>
+
+    <section class="animate">
+      <h2>🔧 Config File Structure</h2>
+      <p>Your server is configured using a <code>.conf</code> file. Here's a sample:</p>
+      <pre class="config-typing"><code>
+server {
+  listen 8080;
+  server_name localhost;
+
+  location / {
+    root ./www;
+    index index.html;
+    autoindex on;
+    allow_methods GET POST;
+  }
+
+  error_page 404 /404.html;
+  client_max_body_size 10M;
+}
+      </code></pre>
+    </section>
+
+    <section class="animate">
+      <h2>✅ Supported Directives</h2>
+      <ul>
+        <li><code>listen</code>: Port the server listens on</li>
+        <li><code>server_name</code>: Optional hostname</li>
+        <li><code>root</code>: Folder for this location</li>
+        <li><code>index</code>: Default file to serve</li>
+        <li><code>autoindex</code>: Enables directory listing</li>
+        <li><code>allow_methods</code>: Permitted HTTP verbs</li>
+        <li><code>error_page</code>: Custom error response</li>
+      </ul>
+    </section>
+
+    <section class="animate">
+      <h2>🧪 Testing Tips</h2>
+      <ul>
+        <li>Use <code>curl</code> for command-line testing</li>
+        <li>Try browser dev tools → Network tab</li>
+        <li>Use Postman for POST/DELETE</li>
+        <li>Test invalid routes to trigger 404s</li>
+      </ul>
+    </section>
+
+    <button class="btn" onclick="location.href='index.html'">🏠 Back to Home</button>
+  </div>
+
+  <script>
+    // Scroll-triggered animation
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+        }
+      });
+    }, { threshold: 0.1 });
+
+    document.querySelectorAll('.animate').forEach(el => {
+      observer.observe(el);
+    });
+  </script>
+</body>
+</html>
