@@ -29,12 +29,15 @@ void ConfigParser::handleLocationDirective(const std::vector<std::string> &token
 		if (value.empty() || value[0] != '/' || value.find("..") != std::string::npos)
 			throw std::runtime_error("Invalid root: " + value);
 		currentLoc.BlockRootPath = value;
+		currentLoc.IsBlockRoot = true;
+
 		root_flag = true;
 	}
 	else if (key == "index") {
 		if (index_flag) throw std::runtime_error("Duplicate index in location");
 		for (size_t i = 1; i < tokens.size(); ++i)
 			currentLoc.Indexes.push_back(tokens[i]);
+		currentLoc.IsBIndexed = true;
 		index_flag = true;
 	}
 	else if (key == "autoindex") {
@@ -51,6 +54,7 @@ void ConfigParser::handleLocationDirective(const std::vector<std::string> &token
 				seen.push_back(tokens[i]);
 		}
 		currentLoc.allowedMethods = seen;
+		currentLoc.IsMethodsSet = true;
 		methods_flag = true;
 	}
 	else if (key == "upload_path") {

@@ -22,9 +22,9 @@ struct LocationBlockConfig {
 	std::string 				LocationName; // access path for the location
 	std::string 				BlockRootPath;
 	bool 						autoindex;
-	//  	bool                        IsBlockRoot;         /*check If the root Path is set inside The location Block*/
-	//      bool                        IsBIndexed;             /*check if there is indexes files Directive*/
-	//      bool                        IsMethodsSet;        /*check if methods are explicitly set for this location*/
+	 	bool                        IsBlockRoot;         /*check If the root Path is set inside The location Block*/
+	     bool                        IsBIndexed;             /*check if there is indexes files Directive*/
+	     bool                        IsMethodsSet;        /*check if methods are explicitly set for this location*/
 	std::string 				upload_path;
 	std::string 				cgi_extension;
 	int 						return_code;

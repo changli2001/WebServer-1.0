@@ -3,7 +3,7 @@
 
 int main(int argc, char **argv)
 {
-	
+
 
 	if (argc != 2)
 	{
@@ -21,6 +21,9 @@ int main(int argc, char **argv)
 			const ServerConfig &config = configs[s];
 			std::cout << "Parsed Server #" << s + 1 << ":\n";
 			std::cout << "- IP: " << config.Ip << "\n";
+			std::cout << "-____- IsRootSet: " << config.IsRootSet << "\n";
+			std::cout << "-____- IsAutoIndex :" << config.IsAutoIndex << "\n";
+			std::cout << "-____- IsIndexed :" << config.IsIndexed << "\n";
 			std::cout << "- Port: " << config.Port << "\n";
 			std::cout << "- Server Name: " << config.server_name << "\n";
 			std::cout << "- Max Body Size: " << config.MaxBodySize << "\n";
@@ -34,6 +37,10 @@ int main(int argc, char **argv)
 				std::cout << "  Location: " << loc.LocationName << "\n";
 				if (!loc.BlockRootPath.empty())
 					std::cout << "    BlockRootPath: " << loc.BlockRootPath << "\n";
+				std::cout << "   _______ IsBIndexed: " << loc.IsBIndexed << "\n";
+				std::cout << "   ___x____ IsBlockRoot: " << loc.IsBlockRoot << "\n";
+				std::cout << "   _______ IsMethodsSet: " << loc.IsMethodsSet << "\n";
+
 				if (!loc.Indexes.empty())
 				{
 					std::cout << "    index:";
@@ -41,6 +48,7 @@ int main(int argc, char **argv)
 						std::cout << " " << loc.Indexes[j];
 					std::cout << "\n";
 				}
+
 
 				if (!loc.upload_path.empty())
 					std::cout << "    upload_path: " << loc.upload_path << "\n";

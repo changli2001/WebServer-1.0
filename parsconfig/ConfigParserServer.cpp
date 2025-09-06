@@ -1,5 +1,3 @@
-// Server block parsing
-
 #include "ConfigParser.hpp"
 #include <algorithm>
 #include <cstdlib>
@@ -10,7 +8,9 @@ void ConfigParser::handleServerDirective(const std::vector<std::string> &tokens,
 										 bool &listen_flag,
 										 bool &server_name_flag,
 										 bool &max_body_flag,
-										 bool &root_server_flag)
+										 bool &root_server_flag,
+										 bool &index_server_flag,
+										 bool &autoindex_server_flag)
 {
 	std::string key = tokens[0];
 	std::string value = (tokens.size() > 1 ? tokens[1] : "");
@@ -43,6 +43,7 @@ void ConfigParser::handleServerDirective(const std::vector<std::string> &tokens,
 		if (value[value.size() - 1] == '/')
 			value = normalize(value);
 		currentServer.RootPath = value;
+		currentServer.IsRootSet = true;
 		root_server_flag = true;
 	}
 	else if (key == "server_name")
@@ -70,12 +71,29 @@ void ConfigParser::handleServerDirective(const std::vector<std::string> &tokens,
 		if (contains_dotdot(value))
 			throw std::runtime_error("Invalid '..' in root path: " + value);
 		int code = std::atoi(tokens[1].c_str());
-		
+
 		if (code < 400 || code > 599)
 			throw std::runtime_error("Invalid error code: " + tokens[1]);
 		if (tokens[2][0] != '/' || tokens[2].find("..") != std::string::npos)
 			throw std::runtime_error("Invalid error page path: " + tokens[2]);
 		currentServer.error_pages[code] = tokens[2];
+	}
+	else if (key == "index")
+	{
+		if (index_server_flag)
+			throw std::runtime_error("Duplicate index directive in server block");
+		for (size_t i = 1; i < tokens.size(); ++i)
+			currentServer.Indexes.push_back(tokens[i]);
+		currentServer.IsIndexed = true;
+		index_server_flag = true;
+	}
+	else if (key == "autoindex")
+	{
+		if (autoindex_server_flag)
+			throw std::runtime_error("Duplicate autoindex directive in server block");
+		currentServer.autoindex = str_to_bool(value);
+		currentServer.IsAutoIndex = true;
+		autoindex_server_flag = true;
 	}
 	else
 	{
