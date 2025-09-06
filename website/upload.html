@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Upload Files</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      --frost: rgba(255, 255, 255, 0.25);
+      --border: rgba(255, 255, 255, 0.18);
+    }
+
+    html {
+      overflow-y: scroll;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: var(--gradient);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 30px;
+      color: #333;
+      animation: fadeIn 1s ease-in;
+      position: relative;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .glow {
+      content: '';
+      position: absolute;
+      width: 400px;
+      height: 400px;
+      background: rgba(255, 255, 255, 0.1);
+      filter: blur(100px);
+      z-index: 0;
+      top: 10%;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+
+    .container {
+      position: relative;
+      background: var(--frost);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--border);
+      padding: 50px 40px;
+      border-radius: 25px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+      max-width: 600px;
+      width: 100%;
+      text-align: center;
+      z-index: 1;
+    }
+
+    h1 {
+      font-size: 2.4rem;
+      color: #ffffff;
+      margin-bottom: 20px;
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+    }
+
+    p {
+      font-size: 1.1rem;
+      color: #eee;
+      margin-bottom: 25px;
+    }
+
+    form {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    input[type="file"] {
+      width: 100%;
+      padding: 14px;
+      background: rgba(255,255,255,0.8);
+      border: 2px dashed #aaa;
+      border-radius: 12px;
+      font-size: 1rem;
+      margin-bottom: 20px;
+      cursor: pointer;
+      transition: border-color 0.3s ease;
+    }
+
+    input[type="file"]:focus {
+      border-color: #764ba2;
+      outline: none;
+    }
+
+    button, .back-button {
+      background: var(--gradient);
+      color: white;
+      border: none;
+      padding: 14px 35px;
+      font-size: 1.1rem;
+      border-radius: 30px;
+      cursor: pointer;
+      font-weight: 600;
+      margin-top: 15px;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    button:hover, .back-button:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 24px rgba(0,0,0,0.3);
+    }
+
+    .back-button {
+      margin-top: 30px;
+    }
+
+    #filePreview {
+      margin-top: 20px;
+      font-size: 0.95rem;
+      color: #fff;
+      text-align: left;
+      width: 100%;
+      animation: fadeInPreview 0.6s ease;
+    }
+
+    #filePreview p {
+      margin-bottom: 10px;
+    }
+
+    #filePreview img {
+      margin-top: 10px;
+      max-width: 100%;
+      border-radius: 10px;
+      border: 1px solid #ccc;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      animation: popIn 0.4s ease;
+    }
+
+    @keyframes popIn {
+      from { opacity: 0; transform: scale(0.95); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    /* Delete section styles */
+    #deleteSection {
+      margin-top: 20px;
+      text-align: center;
+      display: none;
+    }
+    #deleteBtn {
+      background: #e74c3c;
+      color: white;
+      border: none;
+      padding: 12px 30px;
+      font-size: 1rem;
+      border-radius: 25px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: background 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    #deleteBtn:hover {
+      background: #c0392b;
+      transform: translateY(-3px);
+      box-shadow: 0 8px 18px rgba(0,0,0,0.3);
+    }
+    #deleteStatus {
+      margin-top: 10px;
+      font-size: 0.9rem;
+      color: #fff;
+    }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 12px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: #f1f1f1;
+      border-radius: 10px;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      border-radius: 10px;
+      box-shadow: inset 0 0 2px rgba(0, 0, 0, 0.2);
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: linear-gradient(135deg, #5b6fee, #6a40a2);
+    }
+
+    @media (max-width: 600px) {
+      h1 {
+        font-size: 2rem;
+      }
+
+      input[type="file"] {
+        font-size: 0.95rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="glow"></div>
+  <div class="container">
+    <h1>📤 Upload Files</h1>
+    <p>Use the form below to upload files to your server. This helps you test file handling, storage, and server processing capabilities.</p>
+
+    <form method="POST" action="/upload" enctype="multipart/form-data" id="uploadForm">
+      <input type="file" name="file" id="fileInput" required />
+      <div id="filePreview"></div>
+
+      <div id="deleteSection">
+        <button type="button" id="deleteBtn">Delete File</button>
+        <p id="deleteStatus"></p>
+      </div>
+
+      <button type="submit">Upload File</button>
+    </form>
+
+    <button class="back-button" onclick="location.href='index.html'">🏠 Back to Home</button>
+  </div>
+
+  <script>
+    const input = document.getElementById('fileInput');
+    const preview = document.getElementById('filePreview');
+    const deleteSection = document.getElementById('deleteSection');
+    const deleteBtn = document.getElementById('deleteBtn');
+    const deleteStatus = document.getElementById('deleteStatus');
+
+    let currentFileName = '';
+
+    input.addEventListener('change', () => {
+      const file = input.files[0];
+      if (!file) {
+        preview.innerHTML = '';
+        deleteSection.style.display = 'none';
+        currentFileName = '';
+        return;
+      }
+
+      currentFileName = file.name;
+
+      let details = `<p><strong>Name:</strong> ${file.name}<br><strong>Type:</strong> ${file.type || 'Unknown'}<br><strong>Size:</strong> ${(file.size / 1024).toFixed(2)} KB</p>`;
+
+      if (file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = e => {
+          details += `<img src="${e.target.result}" alt="preview" />`;
+          preview.innerHTML = details;
+          deleteSection.style.display = 'block';
+          deleteStatus.textContent = '';
+        };
+        reader.readAsDataURL(file);
+      } else {
+        preview.innerHTML = details;
+        deleteSection.style.display = 'block';
+        deleteStatus.textContent = '';
+      }
+    });
+
+    deleteBtn.addEventListener('click', () => {
+      if (!currentFileName) return;
+
+      fetch(`/upload?file=${encodeURIComponent(currentFileName)}`, {
+        method: 'DELETE'
+      })
+      .then(response => {
+        if (response.ok) {
+          deleteStatus.style.color = '#2ecc71';
+          deleteStatus.textContent = `File "${currentFileName}" deleted successfully.`;
+          preview.innerHTML = '';
+          deleteSection.style.display = 'none';
+          input.value = '';
+          currentFileName = '';
+        } else {
+          deleteStatus.style.color = '#e74c3c';
+          deleteStatus.textContent = `Failed to delete file "${currentFileName}".`;
+        }
+      })
+      .catch(() => {
+        deleteStatus.style.color = '#e74c3c';
+        deleteStatus.textContent = `Network error while deleting "${currentFileName}".`;
+      });
+    });
+  </script>
+</body>
+</html>
