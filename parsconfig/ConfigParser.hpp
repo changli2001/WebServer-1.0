@@ -18,7 +18,7 @@ class ConfigParser {
 		bool isValidServerName(const std::string &name);
 		bool isValidHttpMethod(const std::string &method);
 		void handleLocationDirective(const std::vector<std::string> &tokens,
-									LocationConfig &currentLoc,
+									LocationBlockConfig &currentLoc,
 									bool &root_flag,
 									bool &index_flag,
 									bool &methods_flag,

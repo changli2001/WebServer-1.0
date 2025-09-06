@@ -10,7 +10,7 @@
 
 ConfigParser::ConfigParser(const std::string &filename) : _filename(filename) {}
 
-// Helper methods implementation
+// Helper allowedMethods implementation
 
 std::vector<ServerConfig> ConfigParser::parse()
 {
@@ -24,14 +24,14 @@ std::vector<ServerConfig> ConfigParser::parse()
 	bool in_server = false, in_location = false, expect_open_brace = false;
 
 	ServerConfig currentServer;
-	LocationConfig currentLoc;
+	LocationBlockConfig currentLoc;
 	std::vector<std::string> locationPaths;
 
 	// Server flags
 	bool listen_flag = false, server_name_flag = false, max_body_flag = false, root_server_flag = false;
 
 	// Location flags
-	bool root_flag = false, index_flag = false, methods_flag = false, autoindex_flag = false;
+	bool root_flag = false, index_flag = false, allowedMethods_flag = false, autoindex_flag = false;
 	bool upload_flag = false, cgi_flag = false, return_flag = false;
 
 	while (std::getline(file, line))
@@ -61,9 +61,9 @@ std::vector<ServerConfig> ConfigParser::parse()
 			if (std::find(locationPaths.begin(), locationPaths.end(), tokens[1]) != locationPaths.end())
 				throw std::runtime_error("Duplicate location path: " + tokens[1]);
 
-			currentLoc = LocationConfig();
-			currentLoc.path = tokens[1];
-			locationPaths.push_back(currentLoc.path);
+			currentLoc = LocationBlockConfig();
+			currentLoc.LocationName = tokens[1];
+			locationPaths.push_back(currentLoc.LocationName);
 			expect_open_brace = true;
 		}
 		else if (key == "{")
@@ -74,7 +74,7 @@ std::vector<ServerConfig> ConfigParser::parse()
 			if (!in_server)
 				in_server = true;
 			else
-				in_location = true, root_flag = index_flag = methods_flag = autoindex_flag =
+				in_location = true, root_flag = index_flag = allowedMethods_flag = autoindex_flag =
 										upload_flag = cgi_flag = return_flag = false;
 			++brace_depth;
 		}
@@ -83,18 +83,18 @@ std::vector<ServerConfig> ConfigParser::parse()
 			--brace_depth;
 			if (in_location)
 			{
-				if (currentLoc.index_files.empty())
-					currentLoc.index_files.push_back("index.html");
-				if (currentLoc.methods.empty())
-					currentLoc.methods.push_back("GET");
+				if (currentLoc.Indexes.empty())
+					currentLoc.Indexes.push_back("index.html");
+				if (currentLoc.allowedMethods.empty())
+					currentLoc.allowedMethods.push_back("GET");
 				if ((!currentLoc.upload_path.empty() &&
-					 std::find(currentLoc.methods.begin(), currentLoc.methods.end(), "POST") == currentLoc.methods.end()) ||
+					 std::find(currentLoc.allowedMethods.begin(), currentLoc.allowedMethods.end(), "POST") == currentLoc.allowedMethods.end()) ||
 					(!currentLoc.cgi_extension.empty() &&
-					 std::find(currentLoc.methods.begin(), currentLoc.methods.end(), "POST") == currentLoc.methods.end()))
-					throw std::runtime_error("upload_path or extenstion cgi requires POST method in: " + currentLoc.path);
-				bool allows_post = std::find(currentLoc.methods.begin(), currentLoc.methods.end(), "POST") != currentLoc.methods.end();
+					 std::find(currentLoc.allowedMethods.begin(), currentLoc.allowedMethods.end(), "POST") == currentLoc.allowedMethods.end()))
+					throw std::runtime_error("upload_path or extenstion cgi requires POST method in: " + currentLoc.LocationName);
+				bool allows_post = std::find(currentLoc.allowedMethods.begin(), currentLoc.allowedMethods.end(), "POST") != currentLoc.allowedMethods.end();
 				if (allows_post && currentLoc.upload_path.empty())
-					throw std::runtime_error("Location '" + currentLoc.path + "' allows POST but has no upload_path");
+					throw std::runtime_error("Location '" + currentLoc.LocationName + "' allows POST but has no upload_path");
 
 				currentServer.locations.push_back(currentLoc);
 				in_location = false;
@@ -107,36 +107,36 @@ std::vector<ServerConfig> ConfigParser::parse()
 					throw std::runtime_error("Missing location blocks");
 				bool hasRoot = false;
 				for (size_t i = 0; i < currentServer.locations.size(); ++i)
-					if (currentServer.locations[i].path == "/")
+					if (currentServer.locations[i].LocationName == "/")
 						hasRoot = true;
 				for (size_t i = 0; i < currentServer.locations.size(); ++i)
 				{
-					if (currentServer.locations[i].root.empty())
+					if (currentServer.locations[i].BlockRootPath.empty())
 					{
-						currentServer.locations[i].root = currentServer.root;
+						currentServer.locations[i].BlockRootPath = currentServer.RootPath;
 					}
 				}
 
 				for (size_t i = 0; i < currentServer.locations.size(); ++i)
 				{
-					if (currentServer.locations[i].root.empty())
-						currentServer.locations[i].root = currentServer.root;
+					if (currentServer.locations[i].BlockRootPath.empty())
+						currentServer.locations[i].BlockRootPath = currentServer.RootPath;
 				}
 				if (return_flag && (root_flag || index_flag))
-					throw std::runtime_error("Cannot use 'return' with 'root' or 'index' in the same location block: " + currentLoc.path);
+					throw std::runtime_error("Cannot use 'return' with 'root' or 'index' in the same location block: " + currentLoc.LocationName);
 
 				if (!hasRoot)
 					throw std::runtime_error("Missing location '/' block");
 				if (currentServer.server_name.empty())
 					currentServer.server_name = "localhost";
-				if (currentServer.ip.empty())
-					currentServer.ip = "127.0.0.1";
-				if (currentServer.port == 0)
-					currentServer.port = 8080;
-				if (currentServer.max_body_size == 0)
-					currentServer.max_body_size = 1000000;
+				if (currentServer.Ip.empty())
+					currentServer.Ip = "127.0.0.1";
+				if (currentServer.Port == 0)
+					currentServer.Port = 8080;
+				if (currentServer.MaxBodySize == 0)
+					currentServer.MaxBodySize = 1000000;
 				std::ostringstream oss;
-				oss << currentServer.ip << ":" << currentServer.port;
+				oss << currentServer.Ip << ":" << currentServer.Port;
 				std::string endpoint = oss.str();
 
 				servers.push_back(currentServer);
@@ -153,7 +153,7 @@ std::vector<ServerConfig> ConfigParser::parse()
 
 			if (in_location)
 			{
-				handleLocationDirective(tokens, currentLoc, root_flag, index_flag, methods_flag,
+				handleLocationDirective(tokens, currentLoc, root_flag, index_flag, allowedMethods_flag,
 										autoindex_flag, upload_flag, cgi_flag, return_flag);
 			}
 			else

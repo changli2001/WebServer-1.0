@@ -5,7 +5,7 @@
 #include <stdexcept>
 
 void ConfigParser::handleLocationDirective(const std::vector<std::string> &tokens,
-										 LocationConfig &currentLoc,
+										 LocationBlockConfig &currentLoc,
 										 bool &root_flag,
 										 bool &index_flag,
 										 bool &methods_flag,
@@ -28,13 +28,13 @@ void ConfigParser::handleLocationDirective(const std::vector<std::string> &token
 			value = value.substr(1, value.size() - 2);
 		if (value.empty() || value[0] != '/' || value.find("..") != std::string::npos)
 			throw std::runtime_error("Invalid root: " + value);
-		currentLoc.root = value;
+		currentLoc.BlockRootPath = value;
 		root_flag = true;
 	}
 	else if (key == "index") {
 		if (index_flag) throw std::runtime_error("Duplicate index in location");
 		for (size_t i = 1; i < tokens.size(); ++i)
-			currentLoc.index_files.push_back(tokens[i]);
+			currentLoc.Indexes.push_back(tokens[i]);
 		index_flag = true;
 	}
 	else if (key == "autoindex") {
@@ -50,7 +50,7 @@ void ConfigParser::handleLocationDirective(const std::vector<std::string> &token
 			if (std::find(seen.begin(), seen.end(), tokens[i]) == seen.end())
 				seen.push_back(tokens[i]);
 		}
-		currentLoc.methods = seen;
+		currentLoc.allowedMethods = seen;
 		methods_flag = true;
 	}
 	else if (key == "upload_path") {

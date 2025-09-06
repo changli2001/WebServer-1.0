@@ -28,8 +28,8 @@ void ConfigParser::handleServerDirective(const std::vector<std::string> &tokens,
 		int port = std::atoi(portStr.c_str());
 		if (port < 0 || port > 65535)
 			throw std::runtime_error("Port out of range: " + portStr);
-		currentServer.ip = ip;
-		currentServer.port = port;
+		currentServer.Ip = ip;
+		currentServer.Port = port;
 		listen_flag = true;
 	}
 	else if (key == "root")
@@ -42,7 +42,7 @@ void ConfigParser::handleServerDirective(const std::vector<std::string> &tokens,
 			throw std::runtime_error("Invalid root: " + value);
 		if (value[value.size() - 1] == '/')
 			value = normalize(value);
-		currentServer.root = value;
+		currentServer.RootPath = value;
 		root_server_flag = true;
 	}
 	else if (key == "server_name")
@@ -58,8 +58,8 @@ void ConfigParser::handleServerDirective(const std::vector<std::string> &tokens,
 	{
 		if (max_body_flag)
 			throw std::runtime_error("Duplicate client_max_body_size");
-		currentServer.max_body_size = std::atoi(value.c_str());
-		if (currentServer.max_body_size <= 0)
+		currentServer.MaxBodySize = std::atoi(value.c_str());
+		if (currentServer.MaxBodySize <= 0)
 			throw std::runtime_error("Invalid max_body_size");
 		max_body_flag = true;
 	}
@@ -70,6 +70,7 @@ void ConfigParser::handleServerDirective(const std::vector<std::string> &tokens,
 		if (contains_dotdot(value))
 			throw std::runtime_error("Invalid '..' in root path: " + value);
 		int code = std::atoi(tokens[1].c_str());
+		
 		if (code < 400 || code > 599)
 			throw std::runtime_error("Invalid error code: " + tokens[1]);
 		if (tokens[2][0] != '/' || tokens[2].find("..") != std::string::npos)

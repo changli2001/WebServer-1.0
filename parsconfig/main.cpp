@@ -3,6 +3,8 @@
 
 int main(int argc, char **argv)
 {
+	
+
 	if (argc != 2)
 	{
 		std::cerr << "Usage: ./webserv <config_file>\n";
@@ -11,32 +13,32 @@ int main(int argc, char **argv)
 
 	try
 	{
-		ConfigParser parser(argv[1]);
+		ConfigParser parser(argv[1]); //char *
 		std::vector<ServerConfig> configs = parser.parse();
 
 		for (size_t s = 0; s < configs.size(); ++s)
 		{
 			const ServerConfig &config = configs[s];
 			std::cout << "Parsed Server #" << s + 1 << ":\n";
-			std::cout << "- IP: " << config.ip << "\n";
-			std::cout << "- Port: " << config.port << "\n";
+			std::cout << "- IP: " << config.Ip << "\n";
+			std::cout << "- Port: " << config.Port << "\n";
 			std::cout << "- Server Name: " << config.server_name << "\n";
-			std::cout << "- Max Body Size: " << config.max_body_size << "\n";
+			std::cout << "- Max Body Size: " << config.MaxBodySize << "\n";
 
 			for (std::map<int, std::string>::const_iterator it = config.error_pages.begin(); it != config.error_pages.end(); ++it)
 				std::cout << "- Error Page " << it->first << ": " << it->second << "\n";
 
 			for (size_t i = 0; i < config.locations.size(); ++i)
 			{
-				const LocationConfig &loc = config.locations[i];
-				std::cout << "  Location: " << loc.path << "\n";
-				if (!loc.root.empty())
-					std::cout << "    root: " << loc.root << "\n";
-				if (!loc.index_files.empty())
+				const LocationBlockConfig &loc = config.locations[i];
+				std::cout << "  Location: " << loc.LocationName << "\n";
+				if (!loc.BlockRootPath.empty())
+					std::cout << "    BlockRootPath: " << loc.BlockRootPath << "\n";
+				if (!loc.Indexes.empty())
 				{
 					std::cout << "    index:";
-					for (size_t j = 0; j < loc.index_files.size(); ++j)
-						std::cout << " " << loc.index_files[j];
+					for (size_t j = 0; j < loc.Indexes.size(); ++j)
+						std::cout << " " << loc.Indexes[j];
 					std::cout << "\n";
 				}
 

@@ -9,14 +9,18 @@
 
 struct ServerConfig
 {
-	std::string ip;
-	std::string root;
-	int port;
-	std::string server_name;
-	size_t max_body_size;
-	std::map<int, std::string> error_pages;
-	std::vector<LocationConfig> locations;
-
-	ServerConfig() : port(8888), max_body_size(1000000) {}
+	std::string 						Ip;
+	std::string 						RootPath;
+	int 								Port;			/*make it as a sting*/
+ 	// bool                            	IsRootSet;      
+    // bool                            	IsAutoIndex;    
+    // bool                            	IsIndexed;   
+	std::string 						server_name;
+	size_t 								MaxBodySize;
+	std::map<int, std::string>		 	error_pages;
+	std::vector<LocationBlockConfig> 		locations;
+	// add The indexes 
+	// ad auto index
+	ServerConfig() : Port(8080), MaxBodySize(1000000) {}
 };
 #endif
