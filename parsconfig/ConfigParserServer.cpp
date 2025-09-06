@@ -64,19 +64,24 @@ void ConfigParser::handleServerDirective(const std::vector<std::string> &tokens,
 			throw std::runtime_error("Invalid max_body_size");
 		max_body_flag = true;
 	}
-	else if (key == "error_page")
-	{
-		if (tokens.size() != 3)
+	else if (key == "error_page") {
+		if (tokens.size() < 3)
 			throw std::runtime_error("Invalid error_page directive");
 		if (contains_dotdot(value))
 			throw std::runtime_error("Invalid '..' in root path: " + value);
-		int code = std::atoi(tokens[1].c_str());
 
-		if (code < 400 || code > 599)
-			throw std::runtime_error("Invalid error code: " + tokens[1]);
-		if (tokens[2][0] != '/' || tokens[2].find("..") != std::string::npos)
-			throw std::runtime_error("Invalid error page path: " + tokens[2]);
-		currentServer.error_pages[code] = tokens[2];
+		// Process all error codes except the last token (which is the path)
+		for (size_t i = 1; i < tokens.size() - 1; ++i) {
+			int code = std::atoi(tokens[i].c_str());
+			if (code < 400 || code > 599)
+				throw std::runtime_error("Invalid error code: " + tokens[i]);
+
+			std::string error_path = tokens[tokens.size() - 1];
+			if (error_path[0] != '/' || error_path.find("..") != std::string::npos)
+				throw std::runtime_error("Invalid error page path: " + error_path);
+
+			currentServer.error_pages[code] = error_path;
+		}
 	}
 	else if (key == "index")
 	{
@@ -87,12 +92,10 @@ void ConfigParser::handleServerDirective(const std::vector<std::string> &tokens,
 		currentServer.IsIndexed = true;
 		index_server_flag = true;
 	}
-	else if (key == "autoindex")
-	{
-		if (autoindex_server_flag)
-			throw std::runtime_error("Duplicate autoindex directive in server block");
+	else if (key == "autoindex") {
+		if (autoindex_server_flag) throw std::runtime_error("Duplicate autoindex directive in server block");
 		currentServer.autoindex = str_to_bool(value);
-		currentServer.IsAutoIndex = true;
+		currentServer.IsAutoIndex = true;  // This should be IsAutoIndex, not IsAutoIndexSet
 		autoindex_server_flag = true;
 	}
 	else

@@ -37,9 +37,9 @@ int main(int argc, char **argv)
 				std::cout << "  Location: " << loc.LocationName << "\n";
 				if (!loc.BlockRootPath.empty())
 					std::cout << "    BlockRootPath: " << loc.BlockRootPath << "\n";
-				std::cout << "   _______ IsBIndexed: " << loc.IsBIndexed << "\n";
-				std::cout << "   ___x____ IsBlockRoot: " << loc.IsBlockRoot << "\n";
-				std::cout << "   _______ IsMethodsSet: " << loc.IsMethodsSet << "\n";
+				std::cout << "    IsBIndexed: " << loc.IsBIndexed << "\n";
+				std::cout << "    IsBlockRoot: " << loc.IsBlockRoot << "\n";
+				std::cout << "    IsMethodsSet: " << loc.IsMethodsSet << "\n";
 
 				if (!loc.Indexes.empty())
 				{

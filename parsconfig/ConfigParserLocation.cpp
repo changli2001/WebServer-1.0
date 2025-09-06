@@ -43,6 +43,7 @@ void ConfigParser::handleLocationDirective(const std::vector<std::string> &token
 	else if (key == "autoindex") {
 		if (autoindex_flag) throw std::runtime_error("Duplicate autoindex");
 		currentLoc.autoindex = str_to_bool(value);
+		currentLoc.IsAutoIndexSet = true;  // MARK AS EXPLICITLY SET
 		autoindex_flag = true;
 	}
 	else if (key == "methods") {

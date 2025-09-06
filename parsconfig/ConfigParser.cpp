@@ -8,7 +8,6 @@
 #include <set>
 #include <cstdlib>
 
-
 ConfigParser::ConfigParser(const std::string &filename) : _filename(filename) {}
 std::vector<ServerConfig> ConfigParser::parse()
 {
@@ -36,6 +35,18 @@ std::vector<ServerConfig> ConfigParser::parse()
 	while (std::getline(file, line))
 	{
 		line.erase(std::remove(line.begin(), line.end(), ';'), line.end());
+
+		// ADD THIS: Remove inline comments (everything after #)
+		size_t comment_pos = line.find('#');
+		if (comment_pos != std::string::npos)
+		{
+			line = line.substr(0, comment_pos);
+		}
+
+		// Trim whitespace
+		line.erase(0, line.find_first_not_of(" \t\r\n"));
+		line.erase(line.find_last_not_of(" \t\r\n") + 1);
+
 		if (line.empty() || line[0] == '#')
 			continue;
 
@@ -82,13 +93,13 @@ std::vector<ServerConfig> ConfigParser::parse()
 			--brace_depth;
 			if (in_location)
 			{
-				// INHERIT SERVER-LEVEL SETTINGS TO LOCATION IF NOT SET
+				// FIXED INHERITANCE LOGIC
 				if (currentLoc.Indexes.empty() && currentServer.IsIndexed)
 				{
 					currentLoc.Indexes = currentServer.Indexes;
-					currentLoc.IsBIndexed = true;
+					// DON'T set IsBIndexed for inherited values!
 				}
-				if (!currentServer.IsAutoIndex)
+				if (!currentLoc.IsAutoIndexSet && currentServer.IsAutoIndex) // FIXED CONDITION
 				{
 					currentLoc.autoindex = currentServer.autoindex;
 				}
@@ -102,10 +113,12 @@ std::vector<ServerConfig> ConfigParser::parse()
 					(!currentLoc.cgi_extension.empty() &&
 					 std::find(currentLoc.allowedMethods.begin(), currentLoc.allowedMethods.end(), "POST") == currentLoc.allowedMethods.end()))
 					throw std::runtime_error("upload_path or extenstion cgi requires POST method in: " + currentLoc.LocationName);
-				bool allows_post = std::find(currentLoc.allowedMethods.begin(), currentLoc.allowedMethods.end(), "POST") != currentLoc.allowedMethods.end();
-				if (allows_post && currentLoc.upload_path.empty())
-					throw std::runtime_error("Location '" + currentLoc.LocationName + "' allows POST but has no upload_path");
-
+				// Current strict validation (might be too restrictive):
+// More logical validation: upload_path requires POST, but POST doesn't require upload_path
+				if (!currentLoc.upload_path.empty() &&
+					std::find(currentLoc.allowedMethods.begin(), currentLoc.allowedMethods.end(), "POST") == currentLoc.allowedMethods.end()) {
+					throw std::runtime_error("upload_path requires POST method in: " + currentLoc.LocationName);
+				}
 				currentServer.locations.push_back(currentLoc);
 				in_location = false;
 			}
@@ -131,9 +144,9 @@ std::vector<ServerConfig> ConfigParser::parse()
 					if (currentServer.locations[i].Indexes.empty() && currentServer.IsIndexed)
 					{
 						currentServer.locations[i].Indexes = currentServer.Indexes;
-						currentServer.locations[i].IsBIndexed = true;
+						// DON'T set IsBIndexed for inherited values!
 					}
-					if (!currentServer.IsAutoIndex)
+					if (!currentServer.locations[i].IsAutoIndexSet && currentServer.IsAutoIndex) // FIXED
 					{
 						currentServer.locations[i].autoindex = currentServer.autoindex;
 					}
