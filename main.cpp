@@ -10,10 +10,10 @@ int main()
 
     try
     {
-        Server.CreatSocket();
+        Server.BuildServer();
     }
-
     catch(std::exception &e){
         std::cerr << RED << e.what() << RESET << std::endl;
     }
+    Server.StartServer();
 }

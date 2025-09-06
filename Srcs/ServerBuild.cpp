@@ -1,28 +1,35 @@
 #include "../includes/HttpServer.hpp"
-#include <sys/fcntl.h>
+
 
                                     // Constructors
 HttpServer::HttpServer()
 {
+    this->SrvFDs = 0;
     this->enable = 1;
     this->ServerPort = "0";
     this->SockFD = 0;
     this->serverConfiguration = NULL;
     this->addr_strct = NULL;
+    this->timeout.tv_sec = MAXSEC;
+    this->timeout.tv_usec = MAXUSEC;
 }
 
 HttpServer::HttpServer(const    SrvConfig*  configuration) : serverConfiguration(configuration)
 {
+    this->SrvFDs = 0;
     this->enable = 1;
     this->SockFD = 0;
     this->ServerPort = serverConfiguration->Port;
     this->addr_strct = NULL;
+    this->timeout.tv_sec = MAXSEC;
+    this->timeout.tv_usec = MAXUSEC;
 }
 
                                     // ---- Setter ----
 void        HttpServer::SetSockFd(unsigned int _value)
 {
     this->SockFD = _value;
+    this->SrvFDs = _value; // 3
 }
 
 void    HttpServer::SetHintStruct(addrinfo  *hints)
@@ -87,12 +94,11 @@ void        HttpServer::enableSockReused()
         SetsockoptFails();
     }
 }
-
 /*This Methode Make our socket to non-blocking mode*/
 void    HttpServer::SetNonBlocking()
 {
-    int flags = fcntl(this->SockFD, F_GETFL, 0);
-    if(flags < 0 || fcntl(this->SockFD, F_SETFD, flags | O_NONBLOCK) < 0)
+    
+    if(fcntl(this->SockFD, F_SETFD,O_NONBLOCK) < 0)
     {
         close(this->SockFD);
         throw std::runtime_error("changing socket flags fails");
@@ -110,12 +116,11 @@ void    HttpServer::BindSock()
     {
         ListningFails();
     }
-    std::cout << YELLOW << "Server is Listening on [" 
-        << this->serverConfiguration->Ip << "] : [" << this->ServerPort << "]"
-            << RESET << std::endl;
+
 }
+
 /*The function initiate a socket to use it in our server ...*/
-void    HttpServer::CreatSocket()
+void    HttpServer::BuildServer()
 {
     int    sockFd;
     int    status;

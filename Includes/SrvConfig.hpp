@@ -21,7 +21,7 @@ struct LocationBlockConfig
 
 struct  SrvConfig {
     std::string                     Ip;             
-    int                             Port;           
+    std::string                     Port;           
     bool                            IsRootSet;      
     bool                            IsAutoIndex;    
     bool                            IsIndexed;      
@@ -33,7 +33,7 @@ struct  SrvConfig {
     std::vector<LocationBlockConfig>     locations;      
 
     SrvConfig() :   Ip("127.0.0.1"),
-                    Port(9090),
+                    Port("9099"),
                     IsRootSet(true),
                     IsAutoIndex(false),
                     IsIndexed(false),
