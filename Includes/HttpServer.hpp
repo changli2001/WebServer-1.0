@@ -8,7 +8,7 @@
     #define MAXUSEC             1
     #define READABLE            1
 //                  --- includes ---
-    #include "SrvConfig.hpp"
+    #include "../parsconfig/ServerConfig.hpp"
     #include "colors.hpp"
     #include <netdb.h>
     #include <cstring>
@@ -27,50 +27,41 @@
     #include <arpa/inet.h>
     #include <errno.h>
     #include <vector>
-
+    #include <set>
+    
 class   HttpServer {
     private:
         // ----- Data Members -----
-        std::string                 ServerPort;              /*The port That The Server is Listening ON*/
-        unsigned int                SockFD;                  /*The File Descriptor Returned By The socket*/
-        const       SrvConfig*      serverConfiguration;     /*This is a pointer To The Srver Configuration From The config file*/
-        struct      addrinfo        *addr_strct;             /*The allocated struct by getaddrinfo() */
-        int                         enable;
-        int                         SrvFDs;                  /*All The fds incuded in the server (passive sock fd included)*/
-        struct timeval              timeout;                 /*The server time out */
-        std::vector<int>            client_sockets;          /*A vector storing The clients Fds*/
-        // ----- Server Methodes -----
-        void        SetHintStruct(addrinfo  *hints);                        /*Initiate a hint struct will be used be GetAddrinfo()*/
-        void        SetSockFd(unsigned int _value);                            /*Assign The returend Fd to PortFD*/    
-        void        enableSockReused();                     /*Make The Socket bind To a TIME_WAIT port */
-        void        BindSock();                             /*This Methode bind the socket at a specific port and address*/
-        void        SetNonBlocking();
-        void        Loading();                              /*Called when Select() timeouted */
-        void        AddToSet(fd_set  *MonitoredClients);
-        int         CheckListeningSocket(fd_set  *MonitoredClients);
-        int         CheckClients(fd_set  *MonitoredClients);
-        void        NewClientConnected();
-        void        HandlleClients(fd_set  *MonitoredClients, int fd);
-        bool        SetClientNonBlocking(int  fd);
+        std::vector<ServerConfig>       Servers;               /*All The Servers listed in The configFile*/
+        std::map<int, int>              SocketsPort;             /*each Fd with it specific port [fd : port]*/
+        std::vector<int>                SocketFds;              /*Store the Fd of the created LIstening Sockets*/
+        int                             enable;
+        struct timeval                  timeout;                 /*The server time out */
+        std::vector<int>                client_sockets;          /*A vector storing The clients Fds*/
 
+        // ----- Server Methodes -----
+        void        SetHintStruct(addrinfo  *hints);        /*Initiate a hint struct will be used be GetAddrinfo()*/
+        int         enableSockReused(int SockFd);
+        int         BindSock(int SockFd, addrinfo    *addr_strct);                             /*This Methode bind the socket at a specific port and address*/
+        int         SetNonBlocking(int SockFd);
+        void        AddToSet(fd_set  *MonitoredClients, int *maxFd);
+        void        CheckListeningSocket(fd_set  *MonitoredClients, int *remaining_activity);
+        int         CheckClients(fd_set  *MonitoredClients);
+        void        NewClientConnected(int  ActiveFd);
+        bool        SetClientNonBlocking(int  fd);
+        int         CreatSockets(int     PortNum);  /*This Methode Create The socket*/
         // ----- Getters ----
-        unsigned int                          getSrvSockFd()       const;
-        const std::string                           getSrvPortNmbr()     const;
-        const SrvConfig*                            getConfiguration()   const;
         // ----- Error Handling Methodes -----
-        void        resoulvingFails(int status);                      /*getaddrinfos fails*/
-        void        SocCreatFails();                        /*Fails To creat The socket*/
-        void        SetsockoptFails();                      /*Fails To change the socket behavior*/
-        void        ListningFails();                        /*Listen() API fails*/
-        void        FailToBind();                           /*Bind() API  fails*/
+        void        resoulvingFails(int status);            /*getaddrinfos fails*/
+        // void        SocCreatFails(int PortNum);                        /*Fails To creat The socket*/
         void        SelectFails();
         void        acceptFails();
     public:
         HttpServer();
-        ~HttpServer();
-        HttpServer(const    SrvConfig*  configuration);
-        void        BuildServer();                          /*This Methode Create The socket*/
+        HttpServer(const std::vector<ServerConfig>     _Servers);
         void        StartServer();                          /*From this function the server handlle clients*/
+        void        InitializeServer();                     /*Creat all sockets In the configFile */
+        ~HttpServer();
 };
 
 #endif

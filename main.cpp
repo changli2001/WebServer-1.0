@@ -1,5 +1,5 @@
 #include "./includes/HttpServer.hpp"
-#include "./includes/SrvConfig.hpp"
+// #include "./includes/SrvConfig.hpp"
 #include "./parsconfig/ConfigParser.hpp"
 
     #include <unistd.h>
@@ -7,10 +7,9 @@
 
 int main(int argc, char **argv)
 {
-    SrvConfig       config;
-    HttpServer      Server(&config);
-    std::string     configFile;
-
+    HttpServer                  Server;         //creating a server object
+    std::string                 configFile;     
+    std::vector<ServerConfig>   configs;        //at that variable we will store all servers
 	if (argc > 2)
 	{
 		std::cerr << "No valide number of Args";
@@ -24,8 +23,8 @@ int main(int argc, char **argv)
     }
     try
     {
-        ConfigParser parser(configFile); // creating object for parsing
-        std::vector<ServerConfig> configs = parser.parse(); // start parsing
+        ConfigParser parser(configFile);    // creating object for parsing
+        configs = parser.parse(); // start parsing
     }
 	catch (const std::exception &e)
 	{
@@ -34,7 +33,9 @@ int main(int argc, char **argv)
 	}
     try
     {
-        Server.BuildServer();
+        HttpServer                  Server(configs);
+        Server.InitializeServer();
+        Server.StartServer();
     } 
     catch(std::exception &e){
         std::cerr << RED << e.what() << RESET << std::endl;

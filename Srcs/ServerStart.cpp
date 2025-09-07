@@ -21,19 +21,25 @@ bool    HttpServer::SetClientNonBlocking(int  fd)
     return (true);
 }
 
-void        HttpServer::Loading()
-{
-    std::cout << RED << "." << RESET << std::flush;
-}
 
 /*This Methode add all THe FDs to the monitoring set*/
-void    HttpServer::AddToSet(fd_set  *MonitoredClients)
+void    HttpServer::AddToSet(fd_set  *MonitoredClients, int *maxFd)
 {
-    //Adding The passive socket 
-    FD_SET(this->SockFD, MonitoredClients);
+    //Adding The passive socket
+    for(std::vector<int>::const_iterator it = this->SocketFds.begin(); it != this->SocketFds.end(); it++)
+    {
+        int sockFd = *it;
+        int port = this->SocketsPort[sockFd];
+        FD_SET(sockFd, MonitoredClients);
+        if (sockFd > *maxFd)
+        {
+            *maxFd = sockFd;
+        }
+        std::cout << YELLOW << "Server is Listening on Port [" << port <<  "]" << RESET << std::endl; 
+    }
     for (size_t i = 0; i < this->client_sockets.size(); i++)
     {
-        FD_SET(this->client_sockets[i], MonitoredClients);
+        FD_SET(this->client_sockets[i], MonitoredClients);      //adding client to select set;
     }
 }
 
@@ -63,26 +69,15 @@ void    HttpServer::SelectFails()
     std::cerr << RED << "Select Fails " << strerror(errno) << RESET << std::endl;
 }
 
-/*This Methode check if the socket_fd become READABLE*/
-int     HttpServer::CheckListeningSocket(fd_set  *MonitoredClients)
-{
-    
-    if(FD_ISSET(this->SockFD, MonitoredClients) != 0)
-    {
-        return (1);
-    }
-    return (0);
-}
 
 
 /*The function Take care of any new client connected to The server throught the passive 
     socket*/
-void    HttpServer::NewClientConnected()
+void    HttpServer::NewClientConnected(int  ActiveFd)
 {
     int newClient;
     
-    std::cout << "New client connect " << std::endl;
-    newClient = accept(this->SockFD, NULL, NULL);
+    newClient = accept(ActiveFd, NULL, NULL);
     if(newClient == -1)
     {
         if (errno != EAGAIN && errno != EWOULDBLOCK) {
@@ -90,8 +85,7 @@ void    HttpServer::NewClientConnected()
         }
         return ;
     }
-    this->SrvFDs++;
-    std::cout << GREEN << "New Client connected To The server " << RESET << std::endl;
+    std::cout << GREEN << "New Client connected To The server at port " << this->SocketsPort[ActiveFd] << RESET << std::endl;
     //Add The client to the list of Connected Clients;
     if (SetClientNonBlocking(newClient) == false)
         return ;
@@ -100,24 +94,23 @@ void    HttpServer::NewClientConnected()
     send(newClient, welcome, strlen(welcome), 0);
 }
 
-void        HttpServer::HandlleClients(fd_set  *MonitoredClients, int fd)
+
+
+/*This Methode check if the socket_fd become READABLE*/
+void     HttpServer::CheckListeningSocket(fd_set  *MonitoredClients, int *remaining_activity)
 {
-    std::cout << "Closing The client Connection" << std::endl;
-    //close The client fd
-    close(fd);
-    //rmouve it from the set
-    FD_CLR(fd, MonitoredClients);
-    //remouve The client from The list
-    for(std::vector<int>::iterator it = this->client_sockets.begin(); it != this->client_sockets.end();)
+    for(std::vector<int>::const_iterator it = this->SocketFds.begin(); it != this->SocketFds.end() && *(remaining_activity) > 0
+            ; ++it)
     {
-        if(*it == fd)
+        int SockFd = *it;
+        if(FD_ISSET(SockFd, MonitoredClients))  // New connection detected;
         {
-            it = this->client_sockets.erase(it);
-            break ;
+            (*remaining_activity)--;
+            NewClientConnected(SockFd); //A client connect to the socket of FD = SockFd;
         }
-        else
-            it++;
+
     }
+    return ;
 }
 
 /*The server run here*/
@@ -126,27 +119,22 @@ void    HttpServer::StartServer()
     int     S_status;           //To check The status of select()
     fd_set  MonitoredClients;   // The list to be monitored by Select()
     int     ready;
+    int     MaxFds;
+    int     remaining_activity;
 
     while(true)
     {
+        MaxFds = 0;
         FD_ZERO(&MonitoredClients);
-        AddToSet(&MonitoredClients);
-        std::cout << YELLOW << "Server is Listening on [" 
-        << this->serverConfiguration->Ip << "] : [" << this->ServerPort << "]"
-            << RESET << std::endl;   
-        S_status = select(this->SrvFDs + 1, &MonitoredClients, NULL, NULL, NULL);
+        AddToSet(&MonitoredClients, &MaxFds);
+        S_status = select(MaxFds + 1, &MonitoredClients, NULL, NULL, NULL);
         if(S_status == -1)  //select fails
         {
             SelectFails();
             continue;
         }
-        if (CheckListeningSocket(&MonitoredClients) == 1)
-        {
-            NewClientConnected();
-            continue;
-        }
+        remaining_activity = S_status;
+        CheckListeningSocket(&MonitoredClients, &remaining_activity);
         ready = CheckClients(&MonitoredClients);
-        if (ready != -1)
-            HandlleClients(&MonitoredClients, ready);
     }
 }
