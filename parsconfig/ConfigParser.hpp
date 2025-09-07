@@ -17,6 +17,7 @@ private:
 	bool isSimpleIPv4(const std::string &ip);
 	bool isValidServerName(const std::string &name);
 	bool isValidHttpMethod(const std::string &method);
+	size_t parse_size_with_units(const std::string &size_str);
 	void handleLocationDirective(const std::vector<std::string> &tokens,
 								LocationBlockConfig &currentLoc,
 								bool &root_flag,

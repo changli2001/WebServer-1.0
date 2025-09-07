@@ -26,7 +26,7 @@ void ConfigParser::handleServerDirective(const std::vector<std::string> &tokens,
 		if (ip != "localhost" && !isSimpleIPv4(ip))
 			throw std::runtime_error("Invalid IP: " + ip);
 		int port = std::atoi(portStr.c_str());
-		if (port < 0 || port > 65535)
+		if (port <= 0 || port >= 65535)
 			throw std::runtime_error("Port out of range: " + portStr);
 		currentServer.Ip = ip;
 		currentServer.Port = port;
@@ -55,13 +55,15 @@ void ConfigParser::handleServerDirective(const std::vector<std::string> &tokens,
 		currentServer.server_name = value;
 		server_name_flag = true;
 	}
-	else if (key == "client_max_body_size")
-	{
-		if (max_body_flag)
-			throw std::runtime_error("Duplicate client_max_body_size");
-		currentServer.MaxBodySize = std::atoi(value.c_str());
+	else if (key == "client_max_body_size") {
+		if (max_body_flag) throw std::runtime_error("Duplicate client_max_body_size");
+
+		// Use unit parsing instead of simple atoi
+		currentServer.MaxBodySize = parse_size_with_units(value);
+
 		if (currentServer.MaxBodySize <= 0)
-			throw std::runtime_error("Invalid max_body_size");
+			throw std::runtime_error("Invalid max_body_size: " + value);
+
 		max_body_flag = true;
 	}
 	else if (key == "error_page") {

@@ -60,3 +60,38 @@ bool ConfigParser::isValidHttpMethod(const std::string &method) {
 	return false;
 }
 
+
+
+size_t ConfigParser::parse_size_with_units(const std::string &size_str) {
+    if (size_str.empty()) return 0;
+
+    std::string str = size_str;
+    size_t multiplier = 1;
+    size_t number = 0;
+
+    for (std::string::iterator it = str.begin(); it != str.end(); ++it) {
+        *it = std::toupper(*it);
+    }
+
+    size_t k_pos = str.find('K');
+    size_t m_pos = str.find('M');
+    size_t g_pos = str.find('G');
+
+    if (g_pos != std::string::npos) {
+        multiplier = 1024 * 1024 * 1024;
+        str.erase(g_pos, 1);
+    } else if (m_pos != std::string::npos) {
+        multiplier = 1024 * 1024;
+        str.erase(m_pos, 1);
+    } else if (k_pos != std::string::npos) {
+        multiplier = 1024;
+        str.erase(k_pos, 1);
+    }
+
+    std::istringstream iss(str);
+    if (!(iss >> number)) {
+        throw std::runtime_error("Invalid size format: " + size_str);
+    }
+
+    return number * multiplier;
+}
