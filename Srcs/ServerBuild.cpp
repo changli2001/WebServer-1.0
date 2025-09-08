@@ -1,4 +1,4 @@
-#include "../includes/HttpServer.hpp"
+#include "../Includes/HttpServer.hpp"
 #include <cstddef>
 #include <cstdint>
 #include <netdb.h>
@@ -28,14 +28,6 @@ void    HttpServer::SetHintStruct(addrinfo  *hints)
         hints->ai_flags =       AI_PASSIVE;
 }
 
-
-// /*This function handle The case when The socket creation fails*/
-// void        HttpServer::SocCreatFails(int PortNum)
-// {
-//     (void) PortNum;
-//     throw std::runtime_error("Failed to create socket ");
-// }
-
 /*This function handle The case when The getsockaddr  fails*/
 void        HttpServer::resoulvingFails(int status)
 {
@@ -44,6 +36,7 @@ void        HttpServer::resoulvingFails(int status)
     errorMsg += gai_strerror(status);
     std::cerr << RED << errorMsg << RESET << std::endl;
 }
+
                                         // ---- Methodes ---
 int        HttpServer::enableSockReused(int SockFd)
 {
@@ -58,6 +51,7 @@ int        HttpServer::enableSockReused(int SockFd)
     }
     return (0);
 }
+
 /*This Methode Make our socket to non-blocking mode*/
 int    HttpServer::SetNonBlocking(int  SockFd)
 {
@@ -121,7 +115,6 @@ int    HttpServer::CreatSockets(int     PortNum)
 /*the function creat sockets for all servers listed in The configFile*/
 void        HttpServer::InitializeServer()
 {
-    //Creat a set to keep track of The used ports
     std::set<int>               UsedPorts;
     std::vector<ServerConfig>   Srv = this->Servers;
     int                         SocketFd;
@@ -136,7 +129,6 @@ void        HttpServer::InitializeServer()
             SocketFd = CreatSockets(Port);
             if(SocketFd == -1)
             {
-                //CleanUp() -> To clean all prev opened Ports;
                 throw std::runtime_error("Fail To creat the socket");
             }
             else {

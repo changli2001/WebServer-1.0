@@ -128,10 +128,10 @@ std::vector<ServerConfig> ConfigParser::parse()
 					throw std::runtime_error("Missing 'listen' directive");
 				if (currentServer.locations.empty())
 					throw std::runtime_error("Missing location blocks");
-				bool hasRoot = false;
-				for (size_t i = 0; i < currentServer.locations.size(); ++i)
-					if (currentServer.locations[i].LocationName == "/")
-						hasRoot = true;
+				// bool hasRoot = false;
+				// for (size_t i = 0; i < currentServer.locations.size(); ++i)
+				// 	if (currentServer.locations[i].LocationName == "/")
+				// 		hasRoot = true;
 
 				// INHERIT SERVER-LEVEL SETTINGS TO ALL LOCATIONS
 				for (size_t i = 0; i < currentServer.locations.size(); ++i)

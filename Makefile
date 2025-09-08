@@ -1,10 +1,10 @@
-NAME = webserver
+NAME = webserve
 CC = c++
 FLAGS = -Wall -Wextra -Werror -std=c++98
 
-HEADERS = ./includes/HttpServer.hpp ./includes/colors.hpp \
+HEADERS = ./Includes/HttpServer.hpp ./Includes/colors.hpp ./Includes/Client.hpp \
 			./parsconfig/ConfigParser.hpp ./parsconfig/LocationConfig.hpp ./parsconfig/ServerConfig.hpp
-SRCS = main.cpp ./Srcs/ServerBuild.cpp ./Srcs/ServerStart.cpp \
+SRCS = main.cpp ./Srcs/ServerBuild.cpp ./Srcs/ServerStart.cpp ./Srcs/Client.cpp \
 				./parsconfig/ConfigParser.cpp ./parsconfig/ConfigParserHelpers.cpp ./parsconfig/ConfigParserLocation.cpp \
 				./parsconfig/ConfigParserServer.cpp 
 

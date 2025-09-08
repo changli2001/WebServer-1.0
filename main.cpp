@@ -1,5 +1,5 @@
-#include "./includes/HttpServer.hpp"
-// #include "./includes/SrvConfig.hpp"
+#include "./Includes/HttpServer.hpp"
+
 #include "./parsconfig/ConfigParser.hpp"
 
     #include <unistd.h>
@@ -7,7 +7,6 @@
 
 int main(int argc, char **argv)
 {
-    HttpServer                  Server;         //creating a server object
     std::string                 configFile;     
     std::vector<ServerConfig>   configs;        //at that variable we will store all servers
 	if (argc > 2)
@@ -40,5 +39,4 @@ int main(int argc, char **argv)
     catch(std::exception &e){
         std::cerr << RED << e.what() << RESET << std::endl;
     }
-    Server.StartServer();
 }

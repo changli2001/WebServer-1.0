@@ -10,6 +10,9 @@
 //                  --- includes ---
     #include "../parsconfig/ServerConfig.hpp"
     #include "colors.hpp"
+    
+// Forward declaration
+class Client;
     #include <netdb.h>
     #include <cstring>
     #include <sys/types.h>
@@ -38,6 +41,7 @@ class   HttpServer {
         int                             enable;
         struct timeval                  timeout;                 /*The server time out */
         std::vector<int>                client_sockets;          /*A vector storing The clients Fds*/
+        std::vector<Client*>            clients;                 /*A vector storing Client objects*/
 
         // ----- Server Methodes -----
         void        SetHintStruct(addrinfo  *hints);        /*Initiate a hint struct will be used be GetAddrinfo()*/
@@ -48,6 +52,8 @@ class   HttpServer {
         void        CheckListeningSocket(fd_set  *MonitoredClients, int *remaining_activity);
         int         CheckClients(fd_set  *MonitoredClients);
         void        NewClientConnected(int  ActiveFd);
+        void        RemoveClient(int clientFd);  // Method to clean up disconnected clients
+        void        CheckTimeouts();             // Method to check and remove timed-out clients
         bool        SetClientNonBlocking(int  fd);
         int         CreatSockets(int     PortNum);  /*This Methode Create The socket*/
         // ----- Getters ----
