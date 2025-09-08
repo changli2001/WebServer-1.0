@@ -181,24 +181,26 @@ void    HttpServer::CheckTimeouts()
 void    HttpServer::StartServer()
 {
     int     S_status;           //To check The status of select()
-    fd_set  MonitoredClients;   // The list to be monitored by Select()
+    fd_set  ReadableFds;        // The FDs that are ready for reading
+    fd_set  WritableFds;        // The FDs that are ready for writing
     int     MaxFds;
     int     remaining_activity;
 
     while(true)
     {
         MaxFds = 0;
-        FD_ZERO(&MonitoredClients);
-        AddToSet(&MonitoredClients, &MaxFds);
-        S_status = select(MaxFds + 1, &MonitoredClients, NULL, NULL, NULL);
+        FD_ZERO(&ReadableFds);
+        FD_ZERO(&WritableFds);
+        AddToSet(&ReadableFds, &MaxFds);
+        S_status = select(MaxFds + 1, &ReadableFds, &WritableFds, NULL, NULL);
         if(S_status == -1)  //select fails
         {
             SelectFails();
             continue;
         }
         remaining_activity = S_status;
-        CheckListeningSocket(&MonitoredClients, &remaining_activity);
-        CheckClients(&MonitoredClients);
+        CheckListeningSocket(&ReadableFds, &remaining_activity);
+        CheckClients(&ReadableFds);
         CheckTimeouts();
     }
 }
