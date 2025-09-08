@@ -62,6 +62,9 @@ Client::Client(int fd) : ClientFD(fd)
     request.isComplete = false;
     request.contentLength = 0;
     request.hasBody = false;
+    
+    // Initialize client state to READSTATE (ready to read incoming data)
+    currentState = READSTATE;
 }
 
 
@@ -115,6 +118,42 @@ bool Client::isTimedOut() const
     time_t currentTime = time(NULL);
     time_t idleTime = currentTime - lastActivity;
     return (idleTime > TIMEOUT_SECONDS);
+}
+
+/*Get current client state*/
+ClientState Client::getState() const
+{
+    return currentState;
+}
+
+/*Set client state*/
+void Client::setState(ClientState newState)
+{
+    currentState = newState;
+}
+
+/*Check if client needs to read data*/
+bool Client::needsRead() const
+{
+    return (currentState == READSTATE);
+}
+
+/*Check if client has data ready to write*/
+bool Client::needsWrite() const
+{
+    return (currentState == WRITESTATE && !finalResponse.empty());
+}
+
+/*Check if client can perform read operations*/
+bool Client::canRead() const
+{
+    return (currentState == READSTATE);
+}
+
+/*Check if client can perform write operations*/
+bool Client::canWrite() const
+{
+    return (currentState == WRITESTATE);
 }
 
 bool Client::readRequest()
@@ -180,6 +219,9 @@ bool Client::readAndParseRequest()
                 if (request.hasBody && request.body.size() < request.contentLength) {
                     return readRequestBody();
                 }
+                
+                // Request is complete, change to PROCESSING state
+                currentState = PROCESSING;
                 return true;
             }
         }
@@ -484,7 +526,9 @@ void Client::sendHttpDefaultPage()
     responseHeaders += contentLength;
     
     finalResponse = responseStartLine + responseHeaders + CRLF + responseBody + CRLF;
-    sendResponseToClient();
+    
+    // Set state to WRITESTATE instead of immediately sending
+    currentState = WRITESTATE;
 }
 
 /*Send error response*/
@@ -504,7 +548,9 @@ void Client::sendErrorResponse(unsigned int errorCode)
     responseHeaders += contentLength;
     
     finalResponse = responseStartLine + responseHeaders + CRLF + responseBody + CRLF;
-    sendResponseToClient();
+    
+    // Set state to WRITESTATE instead of immediately sending
+    currentState = WRITESTATE;
 }
 
 /*Send final response to client (from your sendResponseToClient)*/

@@ -24,6 +24,14 @@ struct SClientRequest
     bool                    hasBody;            // Flag to check if request has body
 };
 
+// Client state enumeration for I/O management
+enum ClientState {
+    READSTATE,      // Client is ready to read incoming data
+    PROCESSING,     // Client is processing the request
+    WRITESTATE,     // Client has data ready to write
+    CLOSE           // Client should be closed/disconnected
+};
+
 class   Client{
     private:
         int                    ClientFD;
@@ -31,6 +39,7 @@ class   Client{
         std::string           clientIP;
         time_t                lastActivity;     // Track last activity time
         static const int      TIMEOUT_SECONDS = 30;  // 30 second timeout
+        ClientState           currentState;     // Current client state for I/O operations
         // HTTP Response components
         std::string           finalResponse;
         std::string           responseStartLine;
@@ -77,6 +86,14 @@ class   Client{
         void sendResponseToClient();           // Send final response to client
         void serveRegularFile(const std::string& filePath);  // Serve static files
         void sendRedirection301(const std::string& newUrl);  // Send 301 redirect
+        
+        // State management for I/O operations
+        ClientState getState() const;           // Get current client state
+        void setState(ClientState newState);    // Set client state
+        bool needsRead() const;                 // Check if client needs to read
+        bool needsWrite() const;                // Check if client has data to write
+        bool canRead() const;                   // Check if in reading state
+        bool canWrite() const;                  // Check if in writing state
         
         // Request handling (legacy)
         void setRequest(const SClientRequest& req);
