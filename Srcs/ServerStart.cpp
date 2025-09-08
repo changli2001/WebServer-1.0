@@ -166,8 +166,8 @@ void    HttpServer::CheckTimeouts()
         if (clients[i]->isTimedOut())
         {
             timedOutClients.push_back(clients[i]->getFD());
-            std::cout << "Client : " << clients[i]->getIP() 
-                      << " timed out ..." << std::endl;
+            // std::cout << "Client : " << clients[i]->getIP() 
+            //           << " timed out ..." << std::endl;
         }
     }
     // Remove timed-out clients

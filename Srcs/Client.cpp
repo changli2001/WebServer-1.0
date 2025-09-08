@@ -14,18 +14,8 @@
 
 Client::Client(int fd) : ClientFD(fd)
 {
-    // Get client IP address
-    struct sockaddr_in addr;
-    socklen_t addr_len = sizeof(addr);
-    if (getpeername(fd, (struct sockaddr*)&addr, &addr_len) == 0) {
-        clientIP = inet_ntoa(addr.sin_addr);
-    } else {
-        clientIP = "unknown";
-    }
-    
     // Initialize activity time
     lastActivity = time(NULL);
-    
     // Initialize HTTP response components
     statusNumber = 0;
     statusDescription = "";
@@ -33,7 +23,6 @@ Client::Client(int fd) : ClientFD(fd)
     responseStartLine = "";
     responseHeaders = "";
     responseBody = "";
-    
     // Initialize default HTML page (from your ClientRequest.cpp)
     defaultHtmlPage =
         "<!DOCTYPE html>\n"
@@ -61,7 +50,6 @@ Client::Client(int fd) : ClientFD(fd)
         "    <p><em>Thank you for using webserv.</em></p>\n"
         "</body>\n"
         "</html>";
-    
     // Initialize request structure
     request.clientMethode = "";
     request.clientSourceReq = "";
@@ -74,22 +62,12 @@ Client::Client(int fd) : ClientFD(fd)
     request.isComplete = false;
     request.contentLength = 0;
     request.hasBody = false;
-    memset(request.Request, 0, sizeof(request.Request));
-    memset(request.ReqMethode, 0, sizeof(request.ReqMethode));
-    memset(request.HttpVer, 0, sizeof(request.HttpVer));
-    
-    std::cout << "Client object created for FD: " << ClientFD << " IP: " << clientIP << std::endl;
 }
 
 
 int Client::getFD() const 
 {
     return ClientFD;
-}
-
-const std::string& Client::getIP() const 
-{
-    return clientIP;
 }
 
 time_t Client::getLastActivity() const 
@@ -142,10 +120,12 @@ bool Client::isTimedOut() const
 bool Client::readRequest()
 {
     // Implementation for reading HTTP request
-    ssize_t bytes_read = recv(ClientFD, request.Request, sizeof(request.Request) - 1, 0);
+    char buffer[1024];
+    ssize_t bytes_read = recv(ClientFD, buffer, sizeof(buffer) - 1, 0);
     if (bytes_read > 0)
     {
-        request.Request[bytes_read] = '\0';
+        buffer[bytes_read] = '\0';
+        request.rawRequest += std::string(buffer, bytes_read);
         updateActivity();
         return true;
     }
@@ -182,10 +162,7 @@ bool Client::readAndParseRequest()
         buffer[bytes_read] = '\0';
         updateActivity();
         request.rawRequest += std::string(buffer, bytes_read);
-        // Copy to char array for compatibility (up to buffer size)
-        size_t copy_size = std::min(request.rawRequest.size(), sizeof(request.Request) - 1);
-        strncpy(request.Request, request.rawRequest.c_str(), copy_size);
-        request.Request[copy_size] = '\0';
+        
         std::cout << "Received " << bytes_read << " bytes. Total: " << request.rawRequest.size() << " bytes" << std::endl;
         // Check if request is complete
         if (isRequestComplete())
@@ -357,10 +334,6 @@ void Client::storeMethode()
     size_t space_pos = request.rawRequest.find(' ');
     if (space_pos != std::string::npos) {
         request.clientMethode = request.rawRequest.substr(0, space_pos);
-        
-        // Also update the char array for compatibility
-        strncpy(request.ReqMethode, request.clientMethode.c_str(), sizeof(request.ReqMethode) - 1);
-        request.ReqMethode[sizeof(request.ReqMethode) - 1] = '\0';
     }
     
     std::cout << "Parsed method: " << request.clientMethode << std::endl;
@@ -393,10 +366,6 @@ void Client::storeHttpVersion()
             }
             if (line_end != std::string::npos) {
                 request.httpVersion = request.rawRequest.substr(second_space + 1, line_end - second_space - 1);
-                
-                // Also update the char array for compatibility
-                strncpy(request.HttpVer, request.httpVersion.c_str(), sizeof(request.HttpVer) - 1);
-                request.HttpVer[sizeof(request.HttpVer) - 1] = '\0';
             }
         }
     }
@@ -644,9 +613,7 @@ void Client::processAdvancedRequest()
             if (requestPath.back() == '/') {
                 filePath += "index.html";
             }
-            
             std::cout << "Trying to serve file: " << filePath << std::endl;
-            
             // Check if file exists (basic check)
             std::ifstream testFile(filePath.c_str());
             if (testFile.good())

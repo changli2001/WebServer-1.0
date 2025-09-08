@@ -13,11 +13,7 @@ struct SClientRequest
     std::string         	clientSourceReq;    /*What the client wants from our server ??*/
     std::string         	httpVersion;        /*What the type of HTTP protocol the client is using?*/
     std::string         	completURL;         /*The complete final URL that should be served to the client */
-    
-    char                	Request[8192];      // Increased buffer size for complete requests
-    char                	ReqMethode[70];
     std::string				LocalisationName;
-    char                	HttpVer[15];
     
     // Enhanced request handling
     std::string             rawRequest;         // Store complete raw request
@@ -63,7 +59,6 @@ class   Client{
         ~Client();
         // Getters
         int getFD() const;
-        const std::string& getIP() const;
         time_t getLastActivity() const;
         const std::string& getMethod() const;
         const std::string& getPath() const;

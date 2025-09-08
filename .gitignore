@@ -1,0 +1,11 @@
+# Compiled object files
+*.o
+
+# Shell scripts
+*.sh
+
+# Markdown files
+*.md
+
+# Executable
+webserve
