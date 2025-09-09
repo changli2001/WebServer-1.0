@@ -35,25 +35,33 @@ bool    HttpServer::SetClientNonBlocking(int  fd)
 
 
 /*This Methode add all THe FDs to the monitoring set*/
-void    HttpServer::AddToSet(fd_set  *MonitoredClients, int *maxFd)
+void    HttpServer::AddToSet(fd_set  *ReadableClients, fd_set *WritableClients, int *maxFd)
 {
     //Adding The passive socket
     for(std::vector<int>::const_iterator it = this->SocketFds.begin(); it != this->SocketFds.end(); it++)
     {
         int sockFd = *it;
         int port = this->SocketsPort[sockFd];
-        FD_SET(sockFd, MonitoredClients);
+        FD_SET(sockFd, ReadableClients);
         if (sockFd > *maxFd)
         {
             *maxFd = sockFd;
         }
         std::cout << YELLOW << "Server is Listening on Port [" << port <<  "]" << RESET << std::endl; 
     }
-    //Add clients
-    for (size_t i = 0; i < this->client_sockets.size(); i++)
+    //Add clients based on their state
+    for (size_t i = 0; i < this->clients.size(); i++)
     {
-        int client_fd = this->client_sockets[i];
-        FD_SET(client_fd, MonitoredClients);      //adding client to select set;
+        Client* clientObj = clients[i];
+        int client_fd = clientObj->getFD();
+        if (clientObj->getState() == READSTATE)
+        {
+            FD_SET(client_fd, ReadableClients);
+        }
+        if (clientObj->getState() == WRITESTATE)
+        {
+            FD_SET(client_fd, WritableClients);
+        }
         if (client_fd > *maxFd)
         {
             *maxFd = client_fd;
@@ -63,7 +71,7 @@ void    HttpServer::AddToSet(fd_set  *MonitoredClients, int *maxFd)
 
 //...
 /*Check if a client is READABLE and handle the data*/
-int         HttpServer::CheckClients(fd_set  *MonitoredClients)
+int         HttpServer::CheckReadableClients(fd_set  *MonitoredClients)
 {
     for(size_t i = 0; i < this->client_sockets.size(); i++)
     {
@@ -78,15 +86,17 @@ int         HttpServer::CheckClients(fd_set  *MonitoredClients)
                     break;
                 }
             }
-            if (clientObj != NULL)
+            if (clientObj != NULL && clientObj->getState() == READSTATE)
             {
-                if (!clientObj->readAndParseRequest())
+                if (!clientObj->handleEchoRead())
                 {
-                    std::cout << "Client " << client_fd << " disconnected" << std::endl;
                     RemoveClient(client_fd);
                     return (-1);  // Client was removed
-                }                
-                clientObj->processAdvancedRequest();
+                }
+                else
+                {
+                    clientObj->setState(WRITESTATE);
+                }
             }
             return (client_fd);
         }
@@ -94,7 +104,40 @@ int         HttpServer::CheckClients(fd_set  *MonitoredClients)
     return (-1);
 }
 
-
+int         HttpServer::CheckWriteableClients(fd_set  *MonitoredClients)
+{
+    for(size_t i = 0; i < this->client_sockets.size(); i++)
+    {
+        int client_fd = client_sockets[i];
+        if(FD_ISSET(client_fd, MonitoredClients))
+        {
+            Client* clientObj = NULL;
+            for (size_t j = 0; j < clients.size(); j++)
+            {
+                if (clients[j]->getFD() == client_fd) {
+                    clientObj = clients[j];
+                    break;
+                }
+            }
+            if (clientObj != NULL && clientObj->getState() == WRITESTATE)
+            {
+                if (!clientObj->handleEchoWrite())
+                {
+                    std::cout << "Client " << client_fd << " echo write failed, disconnecting" << std::endl;
+                    RemoveClient(client_fd);
+                    return (-1);
+                }
+                else
+                {
+                    clientObj->setState(READSTATE);
+                    std::cout << "Client " << client_fd << " echo sent, back to READSTATE" << std::endl;
+                }
+            }
+            return (client_fd);
+        }
+    }
+    return (-1);
+}
 
 /*The function Take care of any new client connected to The server throught the passive 
     socket*/
@@ -110,7 +153,6 @@ void    HttpServer::NewClientConnected(int  ActiveFd)
         return ;
     }
     std::cout << GREEN << "New Client connected To The server at port " << this->SocketsPort[ActiveFd] << RESET << std::endl;
-    //Set client to non-blocking mode
     if (SetClientNonBlocking(newClient) == false)
         return ;
     Client* clientObj = new Client(newClient);
@@ -166,13 +208,12 @@ void    HttpServer::CheckTimeouts()
         if (clients[i]->isTimedOut())
         {
             timedOutClients.push_back(clients[i]->getFD());
-            // std::cout << "Client : " << clients[i]->getIP() 
-            //           << " timed out ..." << std::endl;
         }
     }
     // Remove timed-out clients
     for (size_t i = 0; i < timedOutClients.size(); i++)
     {
+        std::cout << "[DEBUG] Client " << timedOutClients[i] << " has timed out, removing connection" << std::endl;
         RemoveClient(timedOutClients[i]);
     }
 }
@@ -191,7 +232,7 @@ void    HttpServer::StartServer()
         MaxFds = 0;
         FD_ZERO(&ReadableFds);
         FD_ZERO(&WritableFds);
-        AddToSet(&ReadableFds, &MaxFds);
+        AddToSet(&ReadableFds,&WritableFds, &MaxFds);
         S_status = select(MaxFds + 1, &ReadableFds, &WritableFds, NULL, NULL);
         if(S_status == -1)  //select fails
         {
@@ -200,7 +241,8 @@ void    HttpServer::StartServer()
         }
         remaining_activity = S_status;
         CheckListeningSocket(&ReadableFds, &remaining_activity);
-        CheckClients(&ReadableFds);
+        CheckReadableClients(&ReadableFds);
+        CheckWriteableClients(&WritableFds);
         CheckTimeouts();
     }
 }

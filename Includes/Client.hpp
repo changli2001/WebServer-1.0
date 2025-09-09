@@ -2,8 +2,21 @@
 
 #include <string>
 #include <ctime>
+#include <iostream>
+#include <sys/socket.h>
+#include <unistd.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <ctime>
+#include <errno.h>
+#include <cstring>
+#include <sstream>
+#include <fstream>
+#include <algorithm>
+#include <cctype>
 
 #define CRLF "\r\n"
+#define BUFFERSIZE 1024
 // Forward declaration to avoid circular dependency
 class HttpServer;
 
@@ -37,6 +50,7 @@ class   Client{
         int                    ClientFD;
         struct SClientRequest  request;
         std::string           clientIP;
+        std::string           tmpBuff;          /*A temporaire buffer to use*/
         time_t                lastActivity;     // Track last activity time
         static const int      TIMEOUT_SECONDS = 30;  // 30 second timeout
         ClientState           currentState;     // Current client state for I/O operations
@@ -49,11 +63,7 @@ class   Client{
         std::string           statusDescription;
         std::string           defaultHtmlPage;
         // HTTP Request parsing methods (enhanced)
-        void storeMethode();                    // Parse HTTP method
-        void storeRequestedPath();              // Parse requested path  
-        void storeHttpVersion();                // Parse HTTP version
         void checkClientMethode();              // Validate HTTP method
-        bool parseHeaders();                    // Parse HTTP headers
         bool isRequestComplete();               // Check if request is complete
         size_t getContentLengthFromHeaders();   // Extract Content-Length
         bool readRequestBody();                 // Read HTTP body if present
@@ -80,7 +90,6 @@ class   Client{
         // HTTP Request/Response processing (enhanced from your methods)
         bool readAndParseRequest();             // Read and parse complete HTTP request
         void processRequest();                  // Process the parsed request
-        void processAdvancedRequest();          // Advanced request processing with file serving
         void sendHttpDefaultPage();            // Send default HTTP page
         void sendErrorResponse(unsigned int errorCode);  // Send error response
         void sendResponseToClient();           // Send final response to client
@@ -98,9 +107,11 @@ class   Client{
         // Request handling (legacy)
         void setRequest(const SClientRequest& req);
         const SClientRequest& getRequest() const;
-        
+        //Request parsing 
         // Client operations
         void sendResponse(const std::string& response);
-        bool readRequest();
+        //Echo server methods
+        bool handleEchoRead();
+        bool handleEchoWrite();
 };
 

@@ -48,9 +48,11 @@ class   HttpServer {
         int         enableSockReused(int SockFd);
         int         BindSock(int SockFd, addrinfo    *addr_strct);                             /*This Methode bind the socket at a specific port and address*/
         int         SetNonBlocking(int SockFd);
-        void        AddToSet(fd_set  *MonitoredClients, int *maxFd);
+        void        AddToSet(fd_set  *ReadableClients, fd_set *WritableClients, int *maxFd);
         void        CheckListeningSocket(fd_set  *MonitoredClients, int *remaining_activity);
-        int         CheckClients(fd_set  *MonitoredClients);
+        int         CheckReadableClients(fd_set  *MonitoredClients);
+        int         CheckWriteableClients(fd_set  *MonitoredClients);
+
         void        NewClientConnected(int  ActiveFd);
         void        RemoveClient(int clientFd);  // Method to clean up disconnected clients
         void        CheckTimeouts();             // Method to check and remove timed-out clients
