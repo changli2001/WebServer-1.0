@@ -19,12 +19,13 @@ class Client;
     #include <sys/socket.h>
     #include <iostream>
     #include <fstream>
+    #include <sstream>
     #include <unistd.h>
     #include <fcntl.h>
     #include <sys/fcntl.h>
     #include <sys/select.h>
-    #include <sys/_select.h>
-    #include <sys/_types/_fd_def.h>
+    // #include <sys/_select.h>
+    // #include <sys/_types/_fd_def.h>
     #include <cstdlib>
     #include <netinet/in.h>
     #include <arpa/inet.h>
@@ -93,6 +94,8 @@ class   HttpServer {
         void        SelectFails();
         void        acceptFails();
         
+        //utils
+        int         StringToInt(const std::string& str);    /*Convert string to int*/
 
     public:
         HttpServer();

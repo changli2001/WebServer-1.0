@@ -1,6 +1,5 @@
 #include "../Includes/HttpServer.hpp"
 #include <cstddef>
-#include <cstdint>
 #include <netdb.h>
 #include <stdexcept>
 #include <unistd.h>
@@ -96,10 +95,10 @@ int    HttpServer::CreatSockets(int     PortNum)
     int                     status;
     struct addrinfo         hints;
     struct      addrinfo    *addr_strct;
-
     SetHintStruct(&hints);
-    
-    status = getaddrinfo(NULL, std::to_string(PortNum).c_str(), &hints, &addr_strct); //c++98 ??
+    std::stringstream ss;
+    ss << PortNum;
+    status = getaddrinfo(NULL, ss.str().c_str(), &hints, &addr_strct); //c++98 ??
     if (status != 0)
     {
         resoulvingFails(status);
@@ -151,3 +150,12 @@ void        HttpServer::InitializeServer()
 }
                                         // ---- Destructor ----
 HttpServer::~HttpServer(){};
+    
+// Simple method to convert a string to an integer
+int HttpServer::StringToInt(const std::string& str)
+{
+    int num = 0;
+    std::stringstream ss(str);
+    ss >> num;
+    return num;
+}

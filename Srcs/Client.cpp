@@ -209,7 +209,6 @@ bool Client::readClientRequest()
     char buffer[40000];
     while (true)
     {
-        puts("check ");
         ssize_t bytes_read = recv(ClientFD, buffer, sizeof(buffer) - 1, 0);
         if (bytes_read > 0)
         {
@@ -217,6 +216,9 @@ bool Client::readClientRequest()
             tmpBuff += std::string(buffer, bytes_read);
             updateActivity();
             std::cout << YELLOW << "[DEBUG]: " << RESET << "read  :" << bytes_read << "From client ."<< std::endl;
+            //printt what readed
+            std::cout << BLUE << "[DEBUG]: " << RESET << "Content :" << tmpBuff << std::endl;
+            //break; // Exit loop after reading available data
         }
 
         else if(bytes_read == -1)
@@ -246,9 +248,11 @@ Client::~Client()
 bool Client::handleEchoWrite()
 {
     // Simple echo response - just send back what we received
+    std::stringstream ss;
+    ss << tmpBuff.length();
     std::string response = "HTTP/1.1 200 OK\r\n"
                           "Content-Type: text/plain\r\n"
-                          "Content-Length: " + std::to_string(tmpBuff.length()) + "\r\n"
+                          "Content-Length: " + ss.str() + "\r\n"
                           "Connection: close\r\n"
                           "\r\n" + tmpBuff;
     

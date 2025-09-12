@@ -1,6 +1,6 @@
 NAME = webserve
 CC = c++
-FLAGS = -Wall -Wextra -Werror -std=c++98
+FLAGS = -Wall -Wextra -Werror -std=c++98 -fsanitize=address -g
 
 HEADERS = ./Includes/HttpServer.hpp ./Includes/colors.hpp ./Includes/Client.hpp \
 			./parsconfig/ConfigParser.hpp ./parsconfig/LocationConfig.hpp  ./parsconfig/ServerConfig.hpp

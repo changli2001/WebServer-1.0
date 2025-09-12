@@ -91,9 +91,11 @@ void         HttpServer::CheckReadableClients(fd_set  *MonitoredClients)
                 clientsToRemove.push_back(client_fd);
                 continue;
             }
+            std::cout << GREEN << "Client " << client_fd << " request read, processing..." << RESET << std::endl;
             //The Client parsing request is malformed;
             if(!clientObj->parseRequest() && clientObj->getParseState() == BADREQUEST) //parse completed
             {
+                std::cout << RED << "The Client Request is malformed , Sending a Bad Request Response" << RESET << std::endl;
                 // Get the appropriate server config for this client's port
                 ServerConfig* config = getServerConfigByClientFD(client_fd);
                 std::string response = generateErrorResponse(400, config); // 400 : bad request ;

@@ -1,6 +1,7 @@
 #include "../Includes/HttpServer.hpp"
 #include <unistd.h>  // For access() function
 #include <fstream>   // For file operations
+#include <sstream>   // For stringstream
 #define CRLF "\r\n"
 
 //Get the error description depending on the error number;
@@ -59,7 +60,9 @@ void HttpServer::genStartLine()
 {
 	std::string		startLine;
 	std::string		httpVersion 		= "HTTP/1.1";
-	std::string		errorCode 			= std::to_string(this->status_nmbr);
+	std::stringstream ss;
+	ss << this->status_nmbr;
+	std::string		errorCode 			= ss.str();
 	std::string		ErrorDescription  	= this->statusDescription;
 	
 	startLine = httpVersion + " " + errorCode + " " + ErrorDescription + CRLF;
@@ -176,7 +179,9 @@ std::string HttpServer::generateErrorResponse(int ErrorCode)
 	genBody();
 	
 	// Add Content-Length header
- 	std::string lenght = "Content-Length: " + std::to_string(_responseBody.size()) + CRLF;
+	std::stringstream lengthStream;
+	lengthStream << _responseBody.size();
+ 	std::string lenght = "Content-Length: " + lengthStream.str() + CRLF;
     this->_responseHeaders += lenght;
     // Assemble the complete response
     this->finalResponse = this->_responseStartLine + this->_responseHeaders + CRLF + this->_responseBody + CRLF;
