@@ -54,6 +54,8 @@ Client::Client(int fd) : ClientFD(fd)
     
     // Initialize client state to READSTATE (ready to read incoming data)
     currentState = READSTATE;
+    currentParsingState = HEADERSPARS;  // Initialize to header parsing state
+    REQUESTSTATE = true;
 }
 
 
@@ -115,10 +117,22 @@ ClientState Client::getState() const
     return currentState;
 }
 
+/*Get current parsing state*/
+ParsingState Client::getParseState() const
+{
+    return currentParsingState;
+}
+
 /*Set client state*/
 void Client::setState(ClientState newState)
 {
     currentState = newState;
+}
+
+/*Set parsing state*/
+void Client::setParseState(ParsingState newState)
+{
+    currentParsingState = newState;
 }
 
 /*Check if client needs to read data*/
@@ -160,42 +174,65 @@ bool Client::isRequestComplete()
     return (true);
 }
 
-/*Handle echo read - read data from client and store it*/
-bool Client::handleEchoRead()
+int     Client::parseRequest()
 {
-    char buffer[1024];
-    ssize_t bytes_read = recv(ClientFD, buffer, sizeof(buffer) - 1, 0);
+    this->setParseState(BADREQUEST);
+    return(0);
+}
+
+/*Check if headers are complete in tmpBuff and extract them*/
+bool Client::checkHeadersComplete()
+{
+    // Look for the end of headers marker: \r\n\r\n
+    size_t headers_end = tmpBuff.find("\r\n\r\n");
     
-    if (bytes_read > 0) {
-        buffer[bytes_read] = '\0';
-        tmpBuff += std::string(buffer, bytes_read);
-        updateActivity();
-        std::cout << "Echo read: received " << bytes_read << " bytes from client " << ClientFD << std::endl;
-        return true;
+    if (headers_end != std::string::npos)
+    {
+        // Headers are complete - extract them (including the request line)
+        Headers = tmpBuff.substr(0, headers_end + 2); // Include the final \r\n but not the separator
+        // Update parsing state to indicate headers are parsed
+        currentParsingState = BODYPARSE;
+        // Call parseheaders method to process the extracted headers
+        parseheaders();
+        // Remove the headers part from tmpBuff, keeping the body part
+        tmpBuff = tmpBuff.substr(headers_end + 4); // Skip the \r\n\r\n
+        return true; // Headers are complete and extracted
     }
-    std::cout << "Echo read failed for client " << ClientFD << std::endl;
+    // Headers are not yet complete
     return false;
 }
 
-/*Handle echo write - send stored data back to client*/
-bool Client::handleEchoWrite()
+/*Handle echo read - read data from client and store it*/
+bool Client::readClientRequest()
 {
-    if (tmpBuff.empty()) {
-        std::cout << "No data to echo for client " << ClientFD << std::endl;
-        return true;  // Nothing to send is not an error
-    }
     
-    ssize_t bytes_sent = send(ClientFD, tmpBuff.c_str(), tmpBuff.size(), 0);
-    
-    if (bytes_sent > 0) {
-        updateActivity();
-        std::cout << "Echo write: sent " << bytes_sent << " bytes to client " << ClientFD << std::endl;
-        tmpBuff.clear();  // Clear buffer after successful send
-        return true;
+    char buffer[40000];
+    while (true)
+    {
+        puts("check ");
+        ssize_t bytes_read = recv(ClientFD, buffer, sizeof(buffer) - 1, 0);
+        if (bytes_read > 0)
+        {
+            buffer[bytes_read] = '\0';
+            tmpBuff += std::string(buffer, bytes_read);
+            updateActivity();
+            std::cout << YELLOW << "[DEBUG]: " << RESET << "read  :" << bytes_read << "From client ."<< std::endl;
+        }
+
+        else if(bytes_read == -1)
+        {
+            // std::cout << RED << "Client Connection Fails .." << RESET << std::endl;
+            return true;
+        }
+        else if(bytes_read == 0)
+        {
+            std::cout << RED << "Client Disconnect .." << RESET << std::endl;
+            return false;
+        }
     }
-    std::cout << "Echo write failed for client " << ClientFD << std::endl;
-    return false;
+    return true;
 }
+
 
 // Destructor 
 Client::~Client()
@@ -203,4 +240,30 @@ Client::~Client()
     if (ClientFD != -1) {
         close(ClientFD);
     }
+}
+
+/*Handle echo write - send echo response back to client*/
+bool Client::handleEchoWrite()
+{
+    // Simple echo response - just send back what we received
+    std::string response = "HTTP/1.1 200 OK\r\n"
+                          "Content-Type: text/plain\r\n"
+                          "Content-Length: " + std::to_string(tmpBuff.length()) + "\r\n"
+                          "Connection: close\r\n"
+                          "\r\n" + tmpBuff;
+    
+    ssize_t bytes_sent = send(ClientFD, response.c_str(), response.length(), 0);
+    if (bytes_sent == -1)
+    {
+        std::cout << RED << "Failed to send echo response" << RESET << std::endl;
+        return false;
+    }
+    
+    updateActivity();
+    std::cout << GREEN << "Echo response sent: " << bytes_sent << " bytes" << RESET << std::endl;
+    
+    // Clear the buffer after echoing
+    tmpBuff.clear();
+    
+    return true;
 }

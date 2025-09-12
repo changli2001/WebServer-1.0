@@ -10,6 +10,7 @@
                                     // Constructors
 HttpServer::HttpServer()
 {
+    currentServerConfig = NULL;
 }
 
 HttpServer::HttpServer(const std::vector<ServerConfig>     _Servers) : Servers(_Servers)
@@ -17,6 +18,7 @@ HttpServer::HttpServer(const std::vector<ServerConfig>     _Servers) : Servers(_
     this->enable = 1;
     this->timeout.tv_sec = MAXSEC;
     this->timeout.tv_usec = MAXUSEC;
+    currentServerConfig = NULL;
 }
 
 
@@ -73,13 +75,16 @@ int    HttpServer::BindSock(int SockFd, addrinfo    *addr_strct)
         std::cerr << RED << "fails to bind the socket " << std::endl;
         return (-1);
     }
+    
     freeaddrinfo(addr_strct);
+    
     if ((listen(SockFd, BACKLOG)) != 0)
     {
         close(SockFd);
         std::cerr << "Listen fails" << strerror(errno) << std::endl;
         return (-1);
     }
+    
     return (0);
 }
 
@@ -109,6 +114,8 @@ int    HttpServer::CreatSockets(int     PortNum)
     if (SetNonBlocking(sockFd) == -1) {freeaddrinfo(addr_strct); return (-1);}
     if (enableSockReused(sockFd) == -1) {freeaddrinfo(addr_strct);return (-1);}
     if (BindSock(sockFd, addr_strct ) == -1) {freeaddrinfo(addr_strct);return (-1);}
+    
+    std::cout << GREEN << "Server now is listening at the port [" << PortNum << "]" << RESET << std::endl;
     return (sockFd);
 }
 

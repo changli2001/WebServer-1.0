@@ -31,6 +31,7 @@ class Client;
     #include <errno.h>
     #include <vector>
     #include <set>
+    #include <map>
     
 class   HttpServer {
     private:
@@ -40,8 +41,17 @@ class   HttpServer {
         std::vector<int>                SocketFds;              /*Store the Fd of the created LIstening Sockets*/
         int                             enable;
         struct timeval                  timeout;                 /*The server time out */
-        std::vector<int>                client_sockets;          /*A vector storing The clients Fds*/
-        std::vector<Client*>            clients;                 /*A vector storing Client objects*/
+        std::map<int, Client*>          clients;                 /*Map storing Client objects by FD*/
+        std::map<int, int>              clientToListeningSocket; /*Map client FD to listening socket FD*/
+
+        // ----- Error Response Generation Members -----
+        std::string                     _responseStartLine;      /*HTTP response start line*/
+        std::string                     _responseHeaders;        /*HTTP response headers*/
+        std::string                     _responseBody;           /*HTTP response body*/
+        std::string                     finalResponse;           /*Complete HTTP response*/
+        unsigned int                    status_nmbr;             /*HTTP status code*/
+        std::string                     statusDescription;       /*HTTP status description*/
+        ServerConfig*                   currentServerConfig;     /*Current server config for error pages*/
 
         // ----- Server Methodes -----
         void        SetHintStruct(addrinfo  *hints);        /*Initiate a hint struct will be used be GetAddrinfo()*/
@@ -50,20 +60,40 @@ class   HttpServer {
         int         SetNonBlocking(int SockFd);
         void        AddToSet(fd_set  *ReadableClients, fd_set *WritableClients, int *maxFd);
         void        CheckListeningSocket(fd_set  *MonitoredClients, int *remaining_activity);
-        int         CheckReadableClients(fd_set  *MonitoredClients);
-        int         CheckWriteableClients(fd_set  *MonitoredClients);
+        void        CheckReadableClients(fd_set  *MonitoredClients);
+        void        CheckWriteableClients(fd_set  *MonitoredClients);
 
         void        NewClientConnected(int  ActiveFd);
         void        RemoveClient(int clientFd);  // Method to clean up disconnected clients
         void        CheckTimeouts();             // Method to check and remove timed-out clients
         bool        SetClientNonBlocking(int  fd);
+        ServerConfig* getServerConfigByClientFD(int clientFd);  // Get ServerConfig for client FD
+        ServerConfig* getServerConfigByPort(int port);          // Get ServerConfig by port
         int         CreatSockets(int     PortNum);  /*This Methode Create The socket*/
-        // ----- Getters ----
+        // ----- Parsers ----
+                //----- errors Response -----
+        std::string generateErrorResponse(int ErrorCode);       /*Generate complete error response*/
+        std::string generateErrorResponse(int ErrorCode, ServerConfig* serverConfig); /*Generate error response with specific config*/
+        void        setCurrentServerConfig(ServerConfig* config); /*Set current server config for error generation*/
+        std::string getStatusDes(unsigned int err);             /*Get error description by error number*/
+        bool        isPageReadable() const;                     /*Check if error page path has read permissions*/
+        bool        defaultErrPageProvided(const short Error) const; /*Check if default error page is provided*/
+        void        genStartLine();                             /*Generate HTTP response start line*/
+        void        genHeaders();                               /*Generate HTTP response headers*/
+        void        genBody();                                  /*Generate HTTP response body*/
+        std::string returnStatusPageHTML(unsigned short error) const; /*Return default HTML for error codes*/
+
+        // ----- Response -----
+        std::string genreateResponse();
+
+
         // ----- Error Handling Methodes -----
         void        resoulvingFails(int status);            /*getaddrinfos fails*/
         // void        SocCreatFails(int PortNum);                        /*Fails To creat The socket*/
         void        SelectFails();
         void        acceptFails();
+        
+
     public:
         HttpServer();
         HttpServer(const std::vector<ServerConfig>     _Servers);

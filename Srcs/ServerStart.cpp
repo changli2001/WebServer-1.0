@@ -41,19 +41,17 @@ void    HttpServer::AddToSet(fd_set  *ReadableClients, fd_set *WritableClients, 
     for(std::vector<int>::const_iterator it = this->SocketFds.begin(); it != this->SocketFds.end(); it++)
     {
         int sockFd = *it;
-        int port = this->SocketsPort[sockFd];
         FD_SET(sockFd, ReadableClients);
         if (sockFd > *maxFd)
         {
             *maxFd = sockFd;
         }
-        std::cout << YELLOW << "Server is Listening on Port [" << port <<  "]" << RESET << std::endl; 
     }
     //Add clients based on their state
-    for (size_t i = 0; i < this->clients.size(); i++)
+    for (std::map<int, Client*>::iterator it = this->clients.begin(); it != this->clients.end(); ++it)
     {
-        Client* clientObj = clients[i];
-        int client_fd = clientObj->getFD();
+        Client* clientObj = it->second;
+        int client_fd = it->first;
         if (clientObj->getState() == READSTATE)
         {
             FD_SET(client_fd, ReadableClients);
@@ -69,74 +67,66 @@ void    HttpServer::AddToSet(fd_set  *ReadableClients, fd_set *WritableClients, 
     }
 }
 
-//...
+// std::string    genreateBadRequest()
+// {
+
+// }
+
 /*Check if a client is READABLE and handle the data*/
-int         HttpServer::CheckReadableClients(fd_set  *MonitoredClients)
+void         HttpServer::CheckReadableClients(fd_set  *MonitoredClients)
 {
-    for(size_t i = 0; i < this->client_sockets.size(); i++)
+    // Iterate through all clients and check if they're ready to read
+    for (std::map<int, Client*>::iterator it = this->clients.begin(); it != this->clients.end(); ++it)
     {
-        int client_fd = client_sockets[i];
-        if(FD_ISSET(client_fd, MonitoredClients))
+        int client_fd = it->first;
+        Client* clientObj = it->second;
+        
+        if (FD_ISSET(client_fd, MonitoredClients) && clientObj->getState() == READSTATE)
         {
-            Client* clientObj = NULL;
-            for (size_t j = 0; j < clients.size(); j++)
+            if (!clientObj->readClientRequest())
             {
-                if (clients[j]->getFD() == client_fd) {
-                    clientObj = clients[j];
-                    break;
-                }
+                RemoveClient(client_fd);
+                continue;
             }
-            if (clientObj != NULL && clientObj->getState() == READSTATE)
+            //The Client parsing request is malformed;
+            if(!clientObj->parseRequest() && clientObj->getParseState() == BADREQUEST) //parse completed
             {
-                if (!clientObj->handleEchoRead())
-                {
-                    RemoveClient(client_fd);
-                    return (-1);  // Client was removed
-                }
-                else
-                {
-                    clientObj->setState(WRITESTATE);
-                }
+                // Get the appropriate server config for this client's port
+                ServerConfig* config = getServerConfigByClientFD(client_fd);
+                std::string response = generateErrorResponse(400, config); // 400 : bad request ;
             }
-            return (client_fd);
+            else if (!clientObj->parseRequest() && clientObj->getParseState() == VALIDREQUEST) //The request is good and we not should start generate a response :
+            {
+                std::string response = genreateResponse();
+            }
         }
     }
-    return (-1);
 }
 
-int         HttpServer::CheckWriteableClients(fd_set  *MonitoredClients)
+void         HttpServer::CheckWriteableClients(fd_set  *MonitoredClients)
 {
-    for(size_t i = 0; i < this->client_sockets.size(); i++)
+    // Iterate through all clients and check if they're ready to write
+    for (std::map<int, Client*>::iterator it = this->clients.begin(); it != this->clients.end(); ++it)
     {
-        int client_fd = client_sockets[i];
-        if(FD_ISSET(client_fd, MonitoredClients))
+        int client_fd = it->first;
+        Client* clientObj = it->second;
+        
+        if (FD_ISSET(client_fd, MonitoredClients) && clientObj->getState() == WRITESTATE)
         {
-            Client* clientObj = NULL;
-            for (size_t j = 0; j < clients.size(); j++)
+            if (!clientObj->handleEchoWrite())
             {
-                if (clients[j]->getFD() == client_fd) {
-                    clientObj = clients[j];
-                    break;
-                }
+                std::cout << "Client " << client_fd << " echo write failed, disconnecting" << std::endl;
+                RemoveClient(client_fd);
+                return;  // Client was removed, exit function
             }
-            if (clientObj != NULL && clientObj->getState() == WRITESTATE)
+            else
             {
-                if (!clientObj->handleEchoWrite())
-                {
-                    std::cout << "Client " << client_fd << " echo write failed, disconnecting" << std::endl;
-                    RemoveClient(client_fd);
-                    return (-1);
-                }
-                else
-                {
-                    clientObj->setState(READSTATE);
-                    std::cout << "Client " << client_fd << " echo sent, back to READSTATE" << std::endl;
-                }
+                clientObj->setState(READSTATE);
+                std::cout << "Client " << client_fd << " echo sent, back to READSTATE" << std::endl;
             }
-            return (client_fd);
+            return;  // Processed one client, exit function
         }
     }
-    return (-1);
 }
 
 /*The function Take care of any new client connected to The server throught the passive 
@@ -156,8 +146,8 @@ void    HttpServer::NewClientConnected(int  ActiveFd)
     if (SetClientNonBlocking(newClient) == false)
         return ;
     Client* clientObj = new Client(newClient);
-    this->client_sockets.push_back(newClient);
-    this->clients.push_back(clientObj);  // Store the client object
+    this->clients[newClient] = clientObj;  // Store the client object in map
+    this->clientToListeningSocket[newClient] = ActiveFd;  // Map client FD to listening socket FD
     clientObj->updateActivity();        // Update activity after sending welcome message
 }
 
@@ -183,31 +173,65 @@ void     HttpServer::CheckListeningSocket(fd_set  *MonitoredClients, int *remain
 /*Remove a client and clean up its resources*/
 void    HttpServer::RemoveClient(int clientFd)
 {
-    // Remove from client_sockets vector
-    std::vector<int>::iterator it = std::find(client_sockets.begin(), client_sockets.end(), clientFd);
-    if (it != client_sockets.end()) {
-        client_sockets.erase(it);
+    std::cout << YELLOW << "[DEBUG] Removing client " << clientFd << RESET << std::endl;
+    close(clientFd);
+    
+    // Find and remove the Client object from map
+    std::map<int, Client*>::iterator it = clients.find(clientFd);
+    if (it != clients.end()) {
+        delete it->second;  // Delete the Client object
+        clients.erase(it);  // Remove from map
+        std::cout << YELLOW << "[DEBUG] Deleted Client object for fd " << clientFd << RESET << std::endl;
     }
-    // Find and remove the corresponding Client object
-    for (std::vector<Client*>::iterator it = clients.begin(); it != clients.end(); ++it) {
-        if ((*it)->getFD() == clientFd)
+    
+    // Remove from client-to-listening-socket mapping
+    std::map<int, int>::iterator mapping_it = clientToListeningSocket.find(clientFd);
+    if (mapping_it != clientToListeningSocket.end()) {
+        clientToListeningSocket.erase(mapping_it);
+        std::cout << YELLOW << "[DEBUG] Removed client-to-socket mapping for fd " << clientFd << RESET << std::endl;
+    }
+    
+    std::cout << "[DEBUG] Client " << clientFd << " cleanup complete" << std::endl;
+}
+
+//eee
+/*Get ServerConfig by client FD - uses the client-to-listening-socket mapping*/
+ServerConfig* HttpServer::getServerConfigByClientFD(int clientFd)
+{
+    // Find which listening socket this client connected to
+    std::map<int, int>::iterator it = clientToListeningSocket.find(clientFd);
+    if (it != clientToListeningSocket.end())
+    {
+        int listeningSocketFd = it->second;
+        int port = this->SocketsPort[listeningSocketFd];
+        return getServerConfigByPort(port);
+    }
+    return NULL;
+}
+
+/*Get ServerConfig by port number*/
+ServerConfig* HttpServer::getServerConfigByPort(int port)
+{
+    // Iterate through all server configurations to find matching port
+    for (std::vector<ServerConfig>::iterator it = Servers.begin(); it != Servers.end(); ++it)
+    {
+        if (it->Port == port)
         {
-            delete *it;  // Clean up the Client object
-            clients.erase(it);
-            break;
+            return &(*it);
         }
     }
+    return NULL;
 }
 
 /*Check for timed-out clients and remove them*/
 void    HttpServer::CheckTimeouts()
 {
     std::vector<int> timedOutClients;
-    for (size_t i = 0; i < clients.size(); i++)
+    for (std::map<int, Client*>::iterator it = this->clients.begin(); it != this->clients.end(); ++it)
     {
-        if (clients[i]->isTimedOut())
+        if (it->second->isTimedOut())
         {
-            timedOutClients.push_back(clients[i]->getFD());
+            timedOutClients.push_back(it->first);
         }
     }
     // Remove timed-out clients
@@ -222,7 +246,7 @@ void    HttpServer::CheckTimeouts()
 void    HttpServer::StartServer()
 {
     int     S_status;           //To check The status of select()
-    fd_set  ReadableFds;        // The FDs that are ready for reading
+    fd_set  ReadableFds;        // The FDs that are ready for reading | 1010 | 2020 | |
     fd_set  WritableFds;        // The FDs that are ready for writing
     int     MaxFds;
     int     remaining_activity;
@@ -240,8 +264,8 @@ void    HttpServer::StartServer()
             continue;
         }
         remaining_activity = S_status;
-        CheckListeningSocket(&ReadableFds, &remaining_activity);
-        CheckReadableClients(&ReadableFds);
+        CheckListeningSocket(&ReadableFds, &remaining_activity); // check if a new client connected 
+        CheckReadableClients(&ReadableFds); // check if one of the connected clients whant to send som data
         CheckWriteableClients(&WritableFds);
         CheckTimeouts();
     }
