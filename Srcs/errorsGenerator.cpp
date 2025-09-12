@@ -9,6 +9,7 @@ std::string HttpServer::getStatusDes(unsigned int err)
 {	
 	switch(err)
 	{
+        case (400): return "Bad Request";
         case (404): return "Not Found";
         case (403): return "Forbidden";
         case (500): return "Internal Server Error";
@@ -139,6 +140,9 @@ std::string HttpServer::returnStatusPageHTML(unsigned short error) const
 {
 	switch (error)
 	{
+	case (400):
+		return "<html><head><title>400 Bad Request</title></head><body><center><h1>400 Bad Request</h1></center><hr>"
+		"<center>WebSerbise/x.x.x</center></body></html>";
 	case (403):
 		return "<html><head><title>403 Forbidden</title></head><body><center><h1>403 Forbidden</h1></center><hr>"
 		"<center>WebSerbise/x.x.x</center>"

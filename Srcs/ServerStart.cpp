@@ -75,10 +75,7 @@ void    HttpServer::AddToSet(fd_set  *ReadableClients, fd_set *WritableClients, 
 /*Check if a client is READABLE and handle the data*/
 void         HttpServer::CheckReadableClients(fd_set  *MonitoredClients)
 {
-    // Use a vector to collect clients that need to be removed
     std::vector<int> clientsToRemove;
-    
-    // Iterate through all clients and check if they're ready to read
     for (std::map<int, Client*>::iterator it = this->clients.begin(); it != this->clients.end(); ++it)
     {
         int client_fd = it->first;
@@ -91,22 +88,15 @@ void         HttpServer::CheckReadableClients(fd_set  *MonitoredClients)
                 clientsToRemove.push_back(client_fd);
                 continue;
             }
-            std::cout << GREEN << "Client " << client_fd << " request read, processing..." << RESET << std::endl;
-            //The Client parsing request is malformed;
-            if(!clientObj->parseRequest() && clientObj->getParseState() == BADREQUEST) //parse completed
+            if(clientObj->getParseState() == BADREQUEST)
             {
-                std::cout << RED << "The Client Request is malformed , Sending a Bad Request Response" << RESET << std::endl;
-                // Get the appropriate server config for this client's port
-                ServerConfig* config = getServerConfigByClientFD(client_fd);
-                std::string response = generateErrorResponse(400, config); // 400 : bad request ;
-            }
-            else if (!clientObj->parseRequest() && clientObj->getParseState() == VALIDREQUEST) //The request is good and we not should start generate a response :
-            {
-                std::string response = genreateResponse();
+                // Always generate a 400 Bad Request response for this client
+                finalResponse = generateErrorResponse(400, getServerConfigByClientFD(client_fd));
+                clientObj->setState(WRITESTATE);
+                clientObj->setfinalResponse(finalResponse);
             }
         }
     }
-    
     // Remove clients after iteration is complete
     for (size_t i = 0; i < clientsToRemove.size(); i++)
     {

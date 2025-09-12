@@ -112,7 +112,7 @@ class   Client{
         void sendResponseToClient();           // Send final response to client
         void serveRegularFile(const std::string& filePath);  // Serve static files
         void sendRedirection301(const std::string& newUrl);  // Send 301 redirect
-        
+        void setfinalResponse(std::string   response);
         // State management for I/O operations
         ClientState getState() const;           // Get current client state
         void setState(ClientState newState);    // Set client state

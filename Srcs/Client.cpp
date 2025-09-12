@@ -161,12 +161,6 @@ bool Client::canWrite() const
 
 
 
-/*Enhanced HTTP request reading with proper buffering*/
-bool Client::readAndParseRequest()
-{
-    // For echo server, we'll use the echo methods instead
-    return true;
-}
 
 /*Check if HTTP request is complete (ends with \r\n\r\n)*/
 bool Client::isRequestComplete()
@@ -202,36 +196,42 @@ bool Client::checkHeadersComplete()
     return false;
 }
 
+/*Enhanced HTTP request reading with proper buffering*/
+bool Client::readAndParseRequest()
+{
+
+    // For echo server, we'll use the echo methods instead
+    return false;
+}
+
+void Client::setfinalResponse(std::string   response)
+{
+    this->finalResponse = response;
+}
+
 /*Handle echo read - read data from client and store it*/
 bool Client::readClientRequest()
 {
-    
     char buffer[40000];
-    while (true)
-    {
+
         ssize_t bytes_read = recv(ClientFD, buffer, sizeof(buffer) - 1, 0);
         if (bytes_read > 0)
         {
             buffer[bytes_read] = '\0';
             tmpBuff += std::string(buffer, bytes_read);
             updateActivity();
-            std::cout << YELLOW << "[DEBUG]: " << RESET << "read  :" << bytes_read << "From client ."<< std::endl;
-            //printt what readed
-            std::cout << BLUE << "[DEBUG]: " << RESET << "Content :" << tmpBuff << std::endl;
-            //break; // Exit loop after reading available data
+            parseRequest();
         }
-
         else if(bytes_read == -1)
         {
-            // std::cout << RED << "Client Connection Fails .." << RESET << std::endl;
-            return true;
+            std::cout << RED << "Read error on client socket" << RESET << std::endl;
+            return false;
         }
         else if(bytes_read == 0)
         {
             std::cout << RED << "Client Disconnect .." << RESET << std::endl;
             return false;
         }
-    }
     return true;
 }
 
@@ -248,13 +248,9 @@ Client::~Client()
 bool Client::handleEchoWrite()
 {
     // Simple echo response - just send back what we received
+    std::string response = this->finalResponse;
     std::stringstream ss;
-    ss << tmpBuff.length();
-    std::string response = "HTTP/1.1 200 OK\r\n"
-                          "Content-Type: text/plain\r\n"
-                          "Content-Length: " + ss.str() + "\r\n"
-                          "Connection: close\r\n"
-                          "\r\n" + tmpBuff;
+    ss << response.length();
     
     ssize_t bytes_sent = send(ClientFD, response.c_str(), response.length(), 0);
     if (bytes_sent == -1)
