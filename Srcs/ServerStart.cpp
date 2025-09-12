@@ -2,8 +2,8 @@
 #include "../Includes/Client.hpp"
 #include <iostream>
 #include <netinet/in.h>
-#include <sys/_types/_fd_def.h>
-#include <sys/_types/_timeval.h>
+// #include <sys/_types/_fd_def.h>
+// #include <sys/_types/_timeval.h>
 #include <sys/socket.h>
 #include <algorithm> 
 #include <vector>
@@ -75,6 +75,9 @@ void    HttpServer::AddToSet(fd_set  *ReadableClients, fd_set *WritableClients, 
 /*Check if a client is READABLE and handle the data*/
 void         HttpServer::CheckReadableClients(fd_set  *MonitoredClients)
 {
+    // Use a vector to collect clients that need to be removed
+    std::vector<int> clientsToRemove;
+    
     // Iterate through all clients and check if they're ready to read
     for (std::map<int, Client*>::iterator it = this->clients.begin(); it != this->clients.end(); ++it)
     {
@@ -85,7 +88,7 @@ void         HttpServer::CheckReadableClients(fd_set  *MonitoredClients)
         {
             if (!clientObj->readClientRequest())
             {
-                RemoveClient(client_fd);
+                clientsToRemove.push_back(client_fd);
                 continue;
             }
             //The Client parsing request is malformed;
@@ -101,10 +104,19 @@ void         HttpServer::CheckReadableClients(fd_set  *MonitoredClients)
             }
         }
     }
+    
+    // Remove clients after iteration is complete
+    for (size_t i = 0; i < clientsToRemove.size(); i++)
+    {
+        RemoveClient(clientsToRemove[i]);
+    }
 }
 
 void         HttpServer::CheckWriteableClients(fd_set  *MonitoredClients)
 {
+    // Use a vector to collect clients that need to be removed
+    std::vector<int> clientsToRemove;
+    
     // Iterate through all clients and check if they're ready to write
     for (std::map<int, Client*>::iterator it = this->clients.begin(); it != this->clients.end(); ++it)
     {
@@ -116,16 +128,20 @@ void         HttpServer::CheckWriteableClients(fd_set  *MonitoredClients)
             if (!clientObj->handleEchoWrite())
             {
                 std::cout << "Client " << client_fd << " echo write failed, disconnecting" << std::endl;
-                RemoveClient(client_fd);
-                return;  // Client was removed, exit function
+                clientsToRemove.push_back(client_fd);
             }
             else
             {
                 clientObj->setState(READSTATE);
                 std::cout << "Client " << client_fd << " echo sent, back to READSTATE" << std::endl;
             }
-            return;  // Processed one client, exit function
         }
+    }
+    
+    // Remove clients after iteration is complete
+    for (size_t i = 0; i < clientsToRemove.size(); i++)
+    {
+        RemoveClient(clientsToRemove[i]);
     }
 }
 
@@ -174,14 +190,16 @@ void     HttpServer::CheckListeningSocket(fd_set  *MonitoredClients, int *remain
 void    HttpServer::RemoveClient(int clientFd)
 {
     std::cout << YELLOW << "[DEBUG] Removing client " << clientFd << RESET << std::endl;
-    close(clientFd);
     
-    // Find and remove the Client object from map
+    // Find the Client object first
     std::map<int, Client*>::iterator it = clients.find(clientFd);
     if (it != clients.end()) {
-        delete it->second;  // Delete the Client object
+        delete it->second;  // Delete the Client object (this will close the FD in destructor)
         clients.erase(it);  // Remove from map
         std::cout << YELLOW << "[DEBUG] Deleted Client object for fd " << clientFd << RESET << std::endl;
+    } else {
+        // If client not found in map, still try to close the FD
+        close(clientFd);
     }
     
     // Remove from client-to-listening-socket mapping
