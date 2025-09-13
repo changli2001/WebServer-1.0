@@ -225,33 +225,101 @@ int Client::parseRequest()
     return 0;
 }
 
-/*Check if headers are complete in tmpBuff and extract them*/
-bool Client::checkHeadersComplete()
-{
-    // Look for the end of headers marker: \r\n\r\n
-    size_t headers_end = tmpBuff.find("\r\n\r\n");
-    
-    if (headers_end != std::string::npos)
-    {
-        // Headers are complete - extract them (including the request line)
-        Headers = tmpBuff.substr(0, headers_end + 2); // Include the final \r\n but not the separator
-        // Update parsing state to indicate headers are parsed
-        currentParsingState = BODYPARSE;
-        // Call parseheaders method to process the extracted headers
-        parseheaders();
-        // Remove the headers part from tmpBuff, keeping the body part
-        tmpBuff = tmpBuff.substr(headers_end + 4); // Skip the \r\n\r\n
-        return true; // Headers are complete and extracted
-    }
-    // Headers are not yet complete
-    return false;
-}
 
 /*Enhanced HTTP request reading with proper buffering*/
 bool Client::readAndParseRequest()
 {
-    // For echo server, we'll use the echo methods instead
-    return false;
+    size_t headers_end = tmpBuff.find("\r\n\r\n");
+    if (headers_end == std::string::npos)
+        return false;
+
+    std::string headerBlock = tmpBuff.substr(0, headers_end);
+    tmpBuff = tmpBuff.substr(headers_end + 4); // remove headers
+
+    std::istringstream stream(headerBlock);
+    std::string line;
+
+    // Parse request line
+    if (!std::getline(stream, line))
+    {
+        this->setParseState(BADREQUEST);
+        return true;
+    }
+
+    if (!line.empty() && line[line.size() - 1] == '\r')
+        line.erase(line.size() - 1, 1);
+
+    std::istringstream requestLine(line);
+    std::string method, url, version;
+    if (!(requestLine >> method >> url >> version))
+    {
+        this->setParseState(BADREQUEST);
+        return true;
+    }
+
+    request.clientMethode   = method;
+    request.clientSourceReq = url;
+    request.httpVersion     = version;
+    //gET Get 
+    // Parse headers
+    request.headers.clear();
+    while (std::getline(stream, line))
+    {
+        if (!line.empty() && line[line.size() - 1] == '\r')
+            line.erase(line.size() - 1, 1);
+        request.headers += line + "\n";
+    }
+
+    request.hasBody = false;
+    request.contentLength = 0;
+    request.isComplete = true;
+
+    // If POST, check Content-Length and Content-Type, and parse body
+    if (request.clientMethode == "POST")
+    {
+        std::string contentType, host, userAgent, accept, connection;
+        std::istringstream headerStream(request.headers);
+        while (std::getline(headerStream, line)) {
+            if (!line.empty() && line[line.size() - 1] == '\n')
+                line.erase(line.size() - 1, 1);
+            size_t pos = line.find(":");
+            if (pos != std::string::npos) {
+                std::string key = line.substr(0, pos);
+                std::string value = line.substr(pos + 1);
+                while (!value.empty() && (value[0] == ' ' || value[0] == '\t')) value.erase(0, 1);
+                if (key == "Content-Length") {
+                    request.contentLength = std::strtoul(value.c_str(), NULL, 10);
+                    if (request.contentLength > 0)
+                        request.hasBody = true;
+                }
+                if (key == "Content-Type") {
+                    contentType = value;
+                }
+                if (key == "Host") {
+                    host = value;
+                }
+                if (key == "User-Agent") {
+                    userAgent = value;
+                }
+                if (key == "Accept") {
+                    accept = value;
+                }
+                if (key == "Connection") {
+                    connection = value;
+                }
+
+            }
+        }
+
+        // Parse body if Content-Length > 0
+        if (request.hasBody && request.contentLength > 0) {
+            request.body = tmpBuff.substr(0, request.contentLength);
+        }
+        // Example: request.host = host; request.userAgent = userAgent; etc. (add to struct if needed)
+    }
+
+    parseRequest();
+    return true;
 }
 
 void Client::setfinalResponse(std::string   response)
@@ -271,8 +339,8 @@ bool Client::readClientRequest()
         buffer[bytes_read] = '\0';
         tmpBuff += std::string(buffer, bytes_read);
         updateActivity();
-        // if (!readAndParseRequest())
-        //     return true; // wait for more data
+        if (!readAndParseRequest())
+            return true; // wait for more data
         parseRequest();
     }
     else if (bytes_read == -1)
