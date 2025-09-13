@@ -1,5 +1,19 @@
 #include "../Includes/Client.hpp"
 
+// Extract body from tmpBuff after headers
+// std::string Client::getBody() const
+// {
+//     if (request.hasBody)
+
+
+//     return request.body;
+// }
+
+// // Get Content-Length from parsed headers
+// size_t Client::getContentLength() const
+// {
+//     return request.contentLength;
+// }
 
 Client::Client(int fd) : ClientFD(fd)
 {
@@ -168,10 +182,32 @@ bool Client::isRequestComplete()
     return (true);
 }
 
-int     Client::parseRequest()
+int Client::parseRequest()
 {
-    this->setParseState(BADREQUEST);
-    return(0);
+    if (!request.isComplete)
+    {
+        this->setParseState(BADREQUEST);
+        return -1;
+    }
+
+    // Validate method
+    if (request.clientMethode != "GET" &&
+        request.clientMethode != "POST" &&
+        request.clientMethode != "DELETE")
+    {
+        this->setParseState(BADREQUEST);
+        return -1;
+    }
+
+    // Validate HTTP version
+    if (request.httpVersion != "HTTP/1.1")
+    {
+        this->setParseState(BADREQUEST);
+        return -1;
+    }
+
+    this->setParseState(VALIDREQUEST);
+    return 0;
 }
 
 /*Check if headers are complete in tmpBuff and extract them*/
@@ -199,10 +235,121 @@ bool Client::checkHeadersComplete()
 /*Enhanced HTTP request reading with proper buffering*/
 bool Client::readAndParseRequest()
 {
+    size_t headers_end = tmpBuff.find("\r\n\r\n");
+    if (headers_end == std::string::npos)
+        return false;
 
-    // For echo server, we'll use the echo methods instead
-    return false;
+    std::string headerBlock = tmpBuff.substr(0, headers_end);
+    tmpBuff = tmpBuff.substr(headers_end + 4); // remove headers
+
+    std::istringstream stream(headerBlock);
+    std::string line;
+
+    // Parse request line
+    if (!std::getline(stream, line))
+    {
+        this->setParseState(BADREQUEST);
+        return true;
+    }
+
+    if (!line.empty() && line[line.size() - 1] == '\r')
+        line.erase(line.size() - 1, 1);
+
+    std::istringstream requestLine(line);
+    std::string method, url, version;
+    if (!(requestLine >> method >> url >> version))
+    {
+        this->setParseState(BADREQUEST);
+        return true;
+    }
+
+    request.clientMethode   = method;
+    request.clientSourceReq = url;
+    request.httpVersion     = version;
+
+    // Parse headers
+    request.headers.clear();
+    while (std::getline(stream, line))
+    {
+        if (!line.empty() && line[line.size() - 1] == '\r')
+            line.erase(line.size() - 1, 1);
+        request.headers += line + "\n";
+    }
+
+    request.hasBody = false;
+    request.contentLength = 0;
+    request.isComplete = true;
+
+    // If POST, check Content-Length and Content-Type, and parse body
+    if (request.clientMethode == "POST") {
+        std::string contentType, host, userAgent, accept, connection;
+        std::istringstream headerStream(request.headers);
+        while (std::getline(headerStream, line)) {
+            if (!line.empty() && line[line.size() - 1] == '\n')
+                line.erase(line.size() - 1, 1);
+            size_t pos = line.find(":");
+            if (pos != std::string::npos) {
+                std::string key = line.substr(0, pos);
+                std::string value = line.substr(pos + 1);
+                while (!value.empty() && (value[0] == ' ' || value[0] == '\t')) value.erase(0, 1);
+                if (key == "Content-Length") {
+                    request.contentLength = std::strtoul(value.c_str(), NULL, 10);
+                    if (request.contentLength > 0)
+                        request.hasBody = true;
+                }
+                if (key == "Content-Type") {
+                    contentType = value;
+                }
+                if (key == "Host") {
+                    host = value;
+                }
+                if (key == "User-Agent") {
+                    userAgent = value;
+                }
+                if (key == "Accept") {
+                    accept = value;
+                }
+                if (key == "Connection") {
+                    connection = value;
+                }
+                if (key == "Referer") {
+                    // Store referer header
+                    // Example: referer = value;
+                }
+                if (key == "Accept-Encoding") {
+                    // Store accept-encoding header
+                    // Example: acceptEncoding = value;
+                }
+                if (key == "Accept-Language") {
+                    // Store accept-language header
+                    // Example: acceptLanguage = value;
+                }
+                if (key == "Cache-Control") {
+                    // Store cache-control header
+                    // Example: cacheControl = value;
+                }
+                if (key == "Pragma") {
+                    // Store pragma header
+                    // Example: pragma = value;
+                }
+                if (key == "Upgrade-Insecure-Requests") {
+                    // Store upgrade-insecure-requests header
+                    // Example: upgradeInsecureRequests = value;
+                }
+            }
+        }
+
+        // Parse body if Content-Length > 0
+        if (request.hasBody && request.contentLength > 0) {
+            request.body = tmpBuff.substr(0, request.contentLength);
+        }
+        // Example: request.host = host; request.userAgent = userAgent; etc. (add to struct if needed)
+    }
+
+    parseRequest();
+    return true;
 }
+
 
 void Client::setfinalResponse(std::string   response)
 {
@@ -213,27 +360,33 @@ void Client::setfinalResponse(std::string   response)
 bool Client::readClientRequest()
 {
     char buffer[40000];
+    ssize_t bytes_read = recv(ClientFD, buffer, sizeof(buffer)-1, 0);
 
-        ssize_t bytes_read = recv(ClientFD, buffer, sizeof(buffer) - 1, 0);
-        if (bytes_read > 0)
-        {
-            buffer[bytes_read] = '\0';
-            tmpBuff += std::string(buffer, bytes_read);
-            updateActivity();
-            parseRequest();
-        }
-        else if(bytes_read == -1)
-        {
-            std::cout << RED << "Read error on client socket" << RESET << std::endl;
-            return false;
-        }
-        else if(bytes_read == 0)
-        {
-            std::cout << RED << "Client Disconnect .." << RESET << std::endl;
-            return false;
-        }
+    if (bytes_read > 0)
+    {
+        buffer[bytes_read] = '\0';
+        tmpBuff += std::string(buffer, bytes_read);
+        updateActivity();
+
+        if (!readAndParseRequest())
+            return true; // wait for more data
+
+        parseRequest();
+    }
+    else if (bytes_read == -1)
+    {
+        std::cout << RED << "Read error on client socket" << RESET << std::endl;
+        return false;
+    }
+    else if (bytes_read == 0)
+    {
+        std::cout << RED << "Client disconnected" << RESET << std::endl;
+        return false;
+    }
+
     return true;
 }
+
 
 
 // Destructor 

@@ -71,6 +71,22 @@ void    HttpServer::AddToSet(fd_set  *ReadableClients, fd_set *WritableClients, 
 // {
 
 // }
+void Client::printParsedRequest() const
+{
+    std::cout << "---- Parsed Client Request ----" << std::endl;
+    std::cout << "Method: " << request.clientMethode << std::endl;
+    std::cout << "Path: " << request.clientSourceReq << std::endl;
+    std::cout << "Full URL: " << request.completURL << std::endl;
+    std::cout << "HTTP Version: " << request.httpVersion << std::endl;
+    std::cout << "Raw Request:\n" << request.rawRequest << std::endl;
+    std::cout << "Headers:\n" << request.headers << std::endl;
+    std::cout << "Body:\n" << request.body << std::endl;
+    std::cout << "Parsed Headers:" << std::endl;
+    for (std::map<std::string,std::string>::const_iterator it = request.parsedHeaders.begin(); it != request.parsedHeaders.end(); ++it)
+        std::cout << it->first << ": " << it->second << std::endl;
+    std::cout << "-------------------------------" << std::endl;
+}
+
 
 /*Check if a client is READABLE and handle the data*/
 void         HttpServer::CheckReadableClients(fd_set  *MonitoredClients)
@@ -87,6 +103,10 @@ void         HttpServer::CheckReadableClients(fd_set  *MonitoredClients)
             {
                 clientsToRemove.push_back(client_fd);
                 continue;
+            }
+            if (clientObj->getParseState() == VALIDREQUEST)
+            {
+                clientObj->printParsedRequest(); // <-- print what was parsed
             }
             if(clientObj->getParseState() == BADREQUEST)
             {
@@ -276,6 +296,7 @@ void    HttpServer::StartServer()
         remaining_activity = S_status;
         CheckListeningSocket(&ReadableFds, &remaining_activity); // check if a new client connected 
         CheckReadableClients(&ReadableFds); // check if one of the connected clients whant to send som data
+
         CheckWriteableClients(&WritableFds);
         CheckTimeouts();
     }
