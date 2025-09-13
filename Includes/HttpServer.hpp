@@ -34,6 +34,10 @@ class Client;
     #include <set>
     #include <map>
     
+    #define ISREG 1
+    #define ISDIRE 2
+    #define NOTVALID -2
+    #define NOTFOUND -1
 class   HttpServer {
     private:
         // ----- Data Members -----
@@ -80,12 +84,42 @@ class   HttpServer {
         bool        isPageReadable() const;                     /*Check if error page path has read permissions*/
         bool        defaultErrPageProvided(const short Error) const; /*Check if default error page is provided*/
         void        genStartLine();                             /*Generate HTTP response start line*/
-        void        genHeaders();                               /*Generate HTTP response headers*/
+        void        genHeaders(const    std::string path);
+                               /*Generate HTTP response headers*/
         void        genBody();                                  /*Generate HTTP response body*/
-        std::string returnStatusPageHTML(unsigned short error) const; /*Return default HTML for error codes*/
-
         // ----- Response -----
-        std::string generateResponse();
+        
+        std::string genreateResponse(Client *ClientObj, ServerConfig*   ServerConfig);
+        
+        
+        
+        
+        
+        
+        
+        //GET Methode
+        std::string                     returnStatusPageHTML(unsigned short error) const; /*Return default HTML for error codes*/
+        std::string                     HandleDirectories(const  std::string&    filePath, ServerConfig* currentServerConfig, const LocationBlockConfig* locationBlock);
+        std::string                     HandleRegularFiles(const   std::string&    filePath);
+        std::string                     ReturnHttpDefaultPage();
+        bool                            isMethodAllowedForLocation(const LocationBlockConfig* locationBlock, std::string requestedMethod) const;
+        std::string                     MachingLocationHandler(ServerConfig*                   currentServerConfig, Client* ClientObj);
+        std::string                     GetMethodeExec(Client *ClientObj);
+        int                             getPathStatus(const  std::string&    pathname);
+        std::string                     autoIndexingServing(bool autoindex, const std::string& filePath);
+        // Additional helper methods needed
+        std::string                     handleIndexFiles(const std::vector<std::string>& indexFiles, const std::string& filePath);
+        std::string                     redirection301(const std::string& path);
+        std::string                     generateAutoindexPage(const  std::string&    filePath);
+        std::string                     servRegFile(const    std::string&    filePath);
+
+
+
+
+
+
+
+
 
 
         // ----- Error Handling Methodes -----

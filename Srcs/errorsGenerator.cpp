@@ -69,15 +69,15 @@ void HttpServer::genStartLine()
 	this->_responseStartLine = startLine;
 }
 
-//HEADERS 
-void HttpServer::genHeaders()
-{
-	std::string		content_type   = "Content-Type: text/html";
-	std::string		server_name    = "Server: WebSerbise";
-	std::string		connectionType = "Connection: close";
+// //HEADERS 
+// void HttpServer::genHeaders()
+// {
+// 	std::string		content_type   = "Content-Type: text/html";
+// 	std::string		server_name    = "Server: WebSerbise";
+// 	std::string		connectionType = "Connection: close";
 
-	this->_responseHeaders = content_type + CRLF + server_name + CRLF + connectionType + CRLF;
-}
+// 	this->_responseHeaders = content_type + CRLF + server_name + CRLF + connectionType + CRLF;
+// }
 
 
 void HttpServer::genBody()
@@ -158,6 +158,9 @@ std::string HttpServer::returnStatusPageHTML(unsigned short error) const
 	case(500):
 		return "<html><head><title>500 Internal Server Error</title></head><body><center><h1>500 Internal Server Error</h1></center><hr>"
 		"<center>WebSerbise/x.x.x</center></body></html>";
+	case(501):
+		return "<html><head><title>501 Not Implemented</title></head><body><center><h1>501 Not Implemented</h1></center><hr>"
+		"<center>WebSerbise/x.x.x</center></body></html>";
 	default:
 		return "<html><body><h1>404 Not Found</h1></body></html>";
 	}
@@ -172,21 +175,17 @@ void HttpServer::setCurrentServerConfig(ServerConfig* config)
 /*This Methode is responsible of creating a response for a client */
 std::string HttpServer::generateErrorResponse(int ErrorCode) 
 {
-	// Set the error code and description
 	this->status_nmbr = ErrorCode;
 	this->statusDescription = getStatusDes(ErrorCode);
 	
-	// Generate all parts of the response
 	genStartLine();
-	genHeaders();
+	genHeaders("");
 	genBody();
 	
-	// Add Content-Length header
 	std::stringstream lengthStream;
 	lengthStream << _responseBody.size();
  	std::string lenght = "Content-Length: " + lengthStream.str() + CRLF;
     this->_responseHeaders += lenght;
-    // Assemble the complete response
     this->finalResponse = this->_responseStartLine + this->_responseHeaders + CRLF + this->_responseBody + CRLF;
     return this->finalResponse;
 }
@@ -200,20 +199,3 @@ std::string HttpServer::generateErrorResponse(int ErrorCode, ServerConfig* serve
     // Generate the response
     return generateErrorResponse(ErrorCode);
 }
-
-/*Generate regular HTTP response*/
-std::string HttpServer::genreateResponse()
-{
-    // TODO: Implement proper HTTP response generation
-    // For now, return a simple response
-    std::string response = 
-        "HTTP/1.1 200 OK\r\n"
-        "Content-Type: text/html\r\n"
-        "Content-Length: 44\r\n"
-        "Connection: close\r\n"
-        "\r\n"
-        "<html><body><h1>Hello World!</h1></body></html>";
-    
-    return response;
-}
-

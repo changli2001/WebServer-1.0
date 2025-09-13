@@ -73,7 +73,7 @@ Client::Client(int fd) : ClientFD(fd)
     REQUESTSTATE = true;
 }
 
-
+//      ----- Getters -----
 int Client::getFD() const 
 {
     return ClientFD;
@@ -109,11 +109,25 @@ const SClientRequest& Client::getRequest() const
     return request;
 }
 
-void Client::sendResponse(const std::string& response) {
-    send(ClientFD, response.c_str(), response.length(), 0);
-    updateActivity();  // Update activity when sending response
+// ----- Setters -----
+void    Client::SetMethdode(std::string Methode)
+{
+    this->request.clientMethode = Methode;
+}
+void    Client::SetPath(std::string Path)
+{
+    this->request.clientSourceReq = Path;
 }
 
+void Client::SetHttpVersion(std::string httpVer)
+{
+    this->request.httpVersion = httpVer;
+}
+
+void Client::SetRequestPath(std::string Path)
+{
+    this->request.completURL = Path;
+}
 void Client::updateActivity()
 {
     lastActivity = time(NULL);
@@ -187,7 +201,7 @@ int Client::parseRequest()
 {
     if (!request.isComplete)
     {
-        this->setParseState(BADREQUEST);
+        this->setParseState(VALIDREQUEST); // for testing 
         return -1;
     }
 
@@ -236,7 +250,6 @@ bool Client::checkHeadersComplete()
 /*Enhanced HTTP request reading with proper buffering*/
 bool Client::readAndParseRequest()
 {
-
     // For echo server, we'll use the echo methods instead
     return false;
 }
@@ -258,10 +271,8 @@ bool Client::readClientRequest()
         buffer[bytes_read] = '\0';
         tmpBuff += std::string(buffer, bytes_read);
         updateActivity();
-
-        if (!readAndParseRequest())
-            return true; // wait for more data
-
+        // if (!readAndParseRequest())
+        //     return true; // wait for more data
         parseRequest();
     }
     else if (bytes_read == -1)
@@ -279,8 +290,6 @@ bool Client::readClientRequest()
 }
 
 
-
-
 /*Handle echo write - send echo response back to client*/
 bool Client::handleEchoWrite()
 {
@@ -289,7 +298,6 @@ bool Client::handleEchoWrite()
         return false;
     }
 
-    // Calculate remaining bytes to send
     size_t remainingBytes = finalResponse.length() - bytesSent;
     if (remainingBytes == 0) {
         std::cout << GREEN << "All response data sent successfully - closing connection" << RESET << std::endl;
@@ -309,7 +317,7 @@ bool Client::handleEchoWrite()
     bytesSent += bytes_sent;
     updateActivity();
     std::cout << GREEN << "Sent " << bytes_sent << " bytes. Total: " << bytesSent << "/" << finalResponse.length() << RESET << std::endl;
-    // Check if all data has been sent
+
     if (bytesSent >= finalResponse.length()) {
         std::cout << GREEN << "Complete response sent successfully - closing connection" << RESET << std::endl;
         finalResponse.clear();

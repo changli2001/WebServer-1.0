@@ -87,6 +87,35 @@ void Client::printParsedRequest() const
     std::cout << "-------------------------------" << std::endl;
 }
 
+/*This methode is The entry Point to start Generatin The response*/
+/*This Methode redirect to The right Mathode To be handlled 
+    otherwise : NOT implemented */
+std::string    HttpServer::genreateResponse(Client *ClientObj, ServerConfig*   ServerConfig)
+{
+    int         i = 0;
+    std::string finalResponse;
+
+    setCurrentServerConfig(ServerConfig);
+    std::string arr[3] = {"GET", "POST", "DELETE"};
+    while (i < 3)
+    {
+        if(strcmp(arr[i].c_str(), ClientObj->getMethod().c_str()) == 0)
+        {
+            break ;
+        }
+    i++;
+    }
+    switch (i)
+    {
+        case(0) :
+            finalResponse = GetMethodeExec(ClientObj);
+            return (finalResponse);
+        default:
+            finalResponse = generateErrorResponse(501, this->currentServerConfig);
+            return (finalResponse);    
+    }
+}
+
 
 /*Check if a client is READABLE and handle the data*/
 void         HttpServer::CheckReadableClients(fd_set  *MonitoredClients)
@@ -116,7 +145,13 @@ void         HttpServer::CheckReadableClients(fd_set  *MonitoredClients)
             }
             else if(clientObj->getParseState() == VALIDREQUEST)
             {
-                
+                clientObj->SetMethdode("GET");
+                clientObj->SetPath("/");
+                clientObj->SetHttpVersion("HTTP/1.1");
+                clientObj->SetRequestPath("/");
+                finalResponse = genreateResponse(clientObj, getServerConfigByClientFD(client_fd)); //client and server config
+                clientObj->setState(WRITESTATE);
+                clientObj->setfinalResponse(finalResponse);
             }
         }
     }
@@ -280,7 +315,6 @@ void    HttpServer::StartServer()
         remaining_activity = S_status;
         CheckListeningSocket(&ReadableFds, &remaining_activity); // check if a new client connected 
         CheckReadableClients(&ReadableFds); // check if one of the connected clients whant to send som data
-
         CheckWriteableClients(&WritableFds);
         CheckTimeouts();
     }

@@ -98,13 +98,20 @@ class   Client{
     public:
         Client(int fd);
         ~Client();
+        
         // Getters
-        int getFD() const;
-        time_t getLastActivity() const;
-        const std::string& getMethod() const;
-        const std::string& getPath() const;
-        const std::string& getHttpVersion() const;
-        ParsingState getParseState() const;
+        int                         getFD() const;
+        time_t                      getLastActivity() const;
+        const std::string&          getMethod() const;
+        const std::string&          getPath() const;
+        const std::string&          getHttpVersion() const;
+        ParsingState                getParseState() const;
+        
+        // --- setters ----
+        void    SetMethdode(std::string Methode);
+        void    SetPath(std::string Path);
+        void    SetHttpVersion(std::string httpVer);
+        void    SetRequestPath(std::string Path);
         // Timeout management
         void updateActivity();                  // Update last activity time
         bool isTimedOut() const;               // Check if client has timed out
@@ -112,6 +119,7 @@ class   Client{
         int     parseRequest();                 /*-1 if the request is invalide , */
         std::string getBody() const;
         size_t getContentLength() const;
+        
         void printParsedRequest() const;
         bool    checkHeadersComplete();         /*Check tmpBuff for complete headers and extract them*/
         // HTTP Request/Response processing (enhanced from your methods)
