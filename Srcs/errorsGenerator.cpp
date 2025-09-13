@@ -22,37 +22,36 @@ std::string HttpServer::getStatusDes(unsigned int err)
 /*This methode check an error page path Have read Permessions to use it */
 bool HttpServer::isPageReadable() const
 {
-	// Check if we have a current server configuration
-	if (currentServerConfig == NULL)
-		return false;
-		
-	// Get the error pages map from current server config
-	std::map<int, std::string> _error_pages = currentServerConfig->error_pages;
-	std::map<int, std::string>::iterator it = _error_pages.find(this->status_nmbr);
-	
-	// Check if error page path exists for this status code
-	if (it == _error_pages.end())
-		return false;
-	
-	// Check if the file has read permissions
-	if (access((it->second).c_str(), R_OK) != 0)
-    	return false;
-    	
-	return true;
+    if (!currentServerConfig) // check for null
+    {
+        return false;
+    }
+
+    std::map<int, std::string> _error_pages = currentServerConfig->error_pages;
+    std::map<int, std::string>::const_iterator it = _error_pages.find(this->status_nmbr);
+
+    if (it == _error_pages.end())
+        return false;
+
+    if (access(it->second.c_str(), R_OK) != 0)
+        return false;
+
+    return true;
 }
 
 /*This methode check if an error page Path is provided*/
+
 bool HttpServer::defaultErrPageProvided(const short Error) const
 {
-	// Get the error pages map from current server config
-	std::map<int, std::string> _error_pages = currentServerConfig->error_pages;
-	std::map<int, std::string>::iterator it = _error_pages.find(Error);
+    if (!currentServerConfig)
+    {
+        return false;
+    }
 
-	if(it != _error_pages.end()) // found a default error page
-	{
-		return (true);
-	}
-	return (false);
+    std::map<int, std::string> _error_pages = currentServerConfig->error_pages;
+    std::map<int, std::string>::const_iterator it = _error_pages.find(Error);
+
+    return (it != _error_pages.end());
 }
 
 

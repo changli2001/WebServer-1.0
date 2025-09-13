@@ -1,5 +1,19 @@
 #include "../Includes/Client.hpp"
 
+// Extract body from tmpBuff after headers
+// std::string Client::getBody() const
+// {
+//     if (request.hasBody)
+
+
+//     return request.body;
+// }
+
+// // Get Content-Length from parsed headers
+// size_t Client::getContentLength() const
+// {
+//     return request.contentLength;
+// }
 
 Client::Client(int fd) : ClientFD(fd)
 {
@@ -169,14 +183,65 @@ bool Client::isRequestComplete()
     return (true);
 }
 
-int     Client::parseRequest()
+int Client::parseRequest()
 {
-    this->setParseState(BADREQUEST);
-    return(0);
+    if (!request.isComplete)
+    {
+        this->setParseState(BADREQUEST);
+        return -1;
+    }
+
+    // Validate method
+    if (request.clientMethode != "GET" &&
+        request.clientMethode != "POST" &&
+        request.clientMethode != "DELETE")
+    {
+        this->setParseState(BADREQUEST);
+        return -1;
+    }
+
+    // Validate HTTP version
+    if (request.httpVersion != "HTTP/1.1")
+    {
+        this->setParseState(BADREQUEST);
+        return -1;
+    }
+
+    this->setParseState(VALIDREQUEST);
+    return 0;
 }
 
+/*Check if headers are complete in tmpBuff and extract them*/
+bool Client::checkHeadersComplete()
+{
+    // Look for the end of headers marker: \r\n\r\n
+    size_t headers_end = tmpBuff.find("\r\n\r\n");
+    
+    if (headers_end != std::string::npos)
+    {
+        // Headers are complete - extract them (including the request line)
+        Headers = tmpBuff.substr(0, headers_end + 2); // Include the final \r\n but not the separator
+        // Update parsing state to indicate headers are parsed
+        currentParsingState = BODYPARSE;
+        // Call parseheaders method to process the extracted headers
+        parseheaders();
+        // Remove the headers part from tmpBuff, keeping the body part
+        tmpBuff = tmpBuff.substr(headers_end + 4); // Skip the \r\n\r\n
+        return true; // Headers are complete and extracted
+    }
+    // Headers are not yet complete
+    return false;
+}
 
-void Client::setfinalResponse(std::string response)
+/*Enhanced HTTP request reading with proper buffering*/
+bool Client::readAndParseRequest()
+{
+
+    // For echo server, we'll use the echo methods instead
+    return false;
+}
+
+void Client::setfinalResponse(std::string   response)
 {
     this->finalResponse = response;
     this->bytesSent = 0;  // Reset counter when setting new response
@@ -186,27 +251,33 @@ void Client::setfinalResponse(std::string response)
 bool Client::readClientRequest()
 {
     char buffer[40000];
+    ssize_t bytes_read = recv(ClientFD, buffer, sizeof(buffer)-1, 0);
 
-        ssize_t bytes_read = recv(ClientFD, buffer, sizeof(buffer) - 1, 0);
-        if (bytes_read > 0)
-        {
-            buffer[bytes_read] = '\0';
-            tmpBuff += std::string(buffer, bytes_read);
-            updateActivity();
-            parseRequest();
-        }
-        else if(bytes_read == -1)
-        {
-            std::cout << RED << "Read error on client socket" << RESET << std::endl;
-            return false;
-        }
-        else if(bytes_read == 0)
-        {
-            std::cout << RED << "Client Disconnect .." << RESET << std::endl;
-            return false;
-        }
+    if (bytes_read > 0)
+    {
+        buffer[bytes_read] = '\0';
+        tmpBuff += std::string(buffer, bytes_read);
+        updateActivity();
+
+        if (!readAndParseRequest())
+            return true; // wait for more data
+
+        parseRequest();
+    }
+    else if (bytes_read == -1)
+    {
+        std::cout << RED << "Read error on client socket" << RESET << std::endl;
+        return false;
+    }
+    else if (bytes_read == 0)
+    {
+        std::cout << RED << "Client disconnected" << RESET << std::endl;
+        return false;
+    }
+
     return true;
 }
+
 
 
 

@@ -15,6 +15,8 @@
 #include <algorithm>
 #include <cctype>
 #include "colors.hpp"
+#include <map>
+#include <vector>
 #define CRLF "\r\n"
 #define BUFFERSIZE 1024
 // Forward declaration to avoid circular dependency
@@ -30,12 +32,16 @@ struct SClientRequest
     
     // Enhanced request handling
     std::string             rawRequest;         // Store complete raw request
-    std::string             headers;            // Store HTTP headers
+    std::string             headers;            // Store HTTP headers (raw form)
     std::string             body;               // Store HTTP body
     bool                    isComplete;         // Flag to check if request is complete
     size_t                  contentLength;      // Content-Length from headers
     bool                    hasBody;            // Flag to check if request has body
+
+    // Extra parsed info
+    std::map<std::string, std::string> parsedHeaders; // parsed headers for easier access
 };
+
 
 enum ParsingState {
     HEADERSPARS,      // Client is ready to read incoming data
@@ -104,6 +110,9 @@ class   Client{
         bool isTimedOut() const;               // Check if client has timed out
         //parse request
         int     parseRequest();                 /*-1 if the request is invalide , */
+        std::string getBody() const;
+        size_t getContentLength() const;
+        void printParsedRequest() const;
         bool    checkHeadersComplete();         /*Check tmpBuff for complete headers and extract them*/
         // HTTP Request/Response processing (enhanced from your methods)
         bool readAndParseRequest();             // Read and parse complete HTTP request
