@@ -6,7 +6,7 @@ HEADERS = ./Includes/HttpServer.hpp ./Includes/colors.hpp ./Includes/Client.hpp 
 			./parsconfig/ConfigParser.hpp ./parsconfig/LocationConfig.hpp  ./parsconfig/ServerConfig.hpp
 SRCS = main.cpp ./Srcs/ServerBuild.cpp ./Srcs/ServerStart.cpp ./Srcs/Client.cpp ./Srcs/errorsGenerator.cpp ./Srcs/RequestParsing.cpp \
 				./parsconfig/ConfigParser.cpp ./parsconfig/ConfigParserHelpers.cpp ./parsconfig/ConfigParserLocation.cpp \
-				./parsconfig/ConfigParserServer.cpp 
+				./parsconfig/ConfigParserServer.cpp ./Srcs/Get.cpp 
 
 OBJS = $(SRCS:.cpp=.o)
 

@@ -43,7 +43,6 @@ int        HttpServer::enableSockReused(int SockFd)
 {
     if (setsockopt(SockFd, SOL_SOCKET, SO_REUSEPORT, &(this->enable), sizeof(this->enable)) == -1)
     {
-        //all previous socket should be cleandup
         std::string erro =  "Fail to Set socket option : ";
         erro +=  strerror(errno) ;
         close(SockFd);
@@ -113,7 +112,6 @@ int    HttpServer::CreatSockets(int     PortNum)
     if (SetNonBlocking(sockFd) == -1) {freeaddrinfo(addr_strct); return (-1);}
     if (enableSockReused(sockFd) == -1) {freeaddrinfo(addr_strct);return (-1);}
     if (BindSock(sockFd, addr_strct ) == -1) {freeaddrinfo(addr_strct);return (-1);}
-    
     std::cout << GREEN << "Server now is listening at the port [" << PortNum << "]" << RESET << std::endl;
     return (sockFd);
 }
@@ -138,7 +136,7 @@ void        HttpServer::InitializeServer()
                 throw std::runtime_error("Fail To creat the socket");
             }
             else {
-                this->SocketFds.push_back(SocketFd);        //Adding The returned Fd of The socket to the list
+                this->SocketFds.push_back(SocketFd);
                 this->SocketsPort[SocketFd] = tmp.Port;
             }
         }

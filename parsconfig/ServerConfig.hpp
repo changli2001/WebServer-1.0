@@ -20,7 +20,8 @@ struct ServerConfig
     std::vector<LocationBlockConfig> 	locations;
     std::vector<std::string> 			    Indexes;      // Server-level index files
     bool 								              autoindex;                        // Server-level autoindex
-
+    bool                             locationFounded;
+    int                              locationMatchIndex;               // Index of the matched location block
     ServerConfig() 
         : Ip(""), 
           RootPath(""), 

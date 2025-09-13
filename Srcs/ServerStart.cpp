@@ -135,7 +135,7 @@ void         HttpServer::CheckReadableClients(fd_set  *MonitoredClients)
             }
             if (clientObj->getParseState() == VALIDREQUEST)
             {
-                clientObj->printParsedRequest(); // <-- print what was parsed
+                clientObj->printParsedRequest();
             }
             if(clientObj->getParseState() == BADREQUEST)
             {

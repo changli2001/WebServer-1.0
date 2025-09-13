@@ -99,16 +99,7 @@ void    ClientRequest::servRegFile(const    std::string&    filePath)
     sendResponseToClient();
 }
 
-/*This Methode Responsible of chosing The Right Response When The requested
-    URL is a regular File*/
-void    ClientRequest::HandlRegFiles(const   std::string&    filePath)
-{
-    this->connectionStatus = -1;
-    if (access(filePath.c_str(), R_OK) != 0)
-        HandlErr    noPermession(this, 403);
-    else
-        servRegFile(filePath);
-}
+
 
 /*This method checks if the requested HTTP method is allowed for a specific location*/
 bool                    ClientRequest::isMethodAllowedForLocation(const LocationConfig* locationBlock) const
@@ -219,10 +210,6 @@ void    ClientRequest::redirection301(const std::string&    URl)
     this->_responseHeaders += lenght;
     this->_responseHeaders += "Location: " + newURL + CRLF;
     this->finalResponse = this->_responseStartLine + this->_responseHeaders + CRLF+ this->_responseBody + CRLF;
-    
-    std::cout << "Final Response : " << finalResponse << RESET << std::endl;
-    sendResponseToClient();
-    //sending The response to client and closing connection;
 }
 
 /*when The request is For a regular existig file*/
@@ -308,81 +295,81 @@ void ClientRequest::handleIndexFiles(const std::vector<std::string>& indexFiles,
 
 }
 
-/*This Methode list The content of a Directory*/
-void    ClientRequest::generateAutoindexPage(const  std::string&    filePath)
-{
-    std::cout << "Generating listing " << std::endl;
-    this->status_nmbr = 200;
-    std::ostringstream html;
-    struct dirent* entry;
+// /*This Methode list The content of a Directory*/
+// void    ClientRequest::generateAutoindexPage(const  std::string&    filePath)
+// {
+//     std::cout << "Generating listing " << std::endl;
+//     this->status_nmbr = 200;
+//     std::ostringstream html;
+//     struct dirent* entry;
 
-    //Generate the first line
-    genStartLine();
-    genHeaders();
+//     //Generate the first line
+//     genStartLine();
+//     genHeaders();
 
-    std::cout << "Path To open : " <<filePath << std::endl;
-    DIR* dir = opendir(filePath.c_str());
-    if (!dir)
-    {    
-        std::cerr << "Failed to open directory: " << filePath << std::endl;
-        //close The connection and ;
-        this->connectionStatus = -1;
-        HandlErr    internalServererr(this, 500);
-        return ;
-    }
+//     std::cout << "Path To open : " <<filePath << std::endl;
+//     DIR* dir = opendir(filePath.c_str());
+//     if (!dir)
+//     {    
+//         std::cerr << "Failed to open directory: " << filePath << std::endl;
+//         //close The connection and ;
+//         this->connectionStatus = -1;
+//         HandlErr    internalServererr(this, 500);
+//         return ;
+//     }
 
-    html << "<!DOCTYPE html>\n"
-         << "<html>\n"
-         << "<head>\n"
-         << "  <meta charset=\"UTF-8\">\n"
-         << "  <title>Indexs </title>\n"
-         << "  <style>body { font-family: Arial; }</style>\n"
-         << "</head>\n"
-         << "<body>\n"
-         << "  <h1>Directory Listing</h1>\n"
-         << "  <ul>\n";
+//     html << "<!DOCTYPE html>\n"
+//          << "<html>\n"
+//          << "<head>\n"
+//          << "  <meta charset=\"UTF-8\">\n"
+//          << "  <title>Indexs </title>\n"
+//          << "  <style>body { font-family: Arial; }</style>\n"
+//          << "</head>\n"
+//          << "<body>\n"
+//          << "  <h1>Directory Listing</h1>\n"
+//          << "  <ul>\n";
 
-    entry = readdir(dir);
-    while (entry    != NULL)
-    {
+//     entry = readdir(dir);
+//     while (entry    != NULL)
+//     {
         
-        const char* name = entry->d_name;
-        if (strcmp(name, ".") == 0 || strcmp(name, "..") == 0)
-        {
-            entry = readdir(dir);
-            continue;
-        }
-        std::string displayName = name;
-        if (entry->d_type == DT_DIR)
-        {
-            displayName += "/";
-        }
-        html << "    <li><a href=\"" << name << "\">" << displayName << "</a></li>\n";
-        entry = readdir(dir);
-    }
-    html << "  </ul>\n"
-         << "</body>\n"
-         << "</html>\n";
+//         const char* name = entry->d_name;
+//         if (strcmp(name, ".") == 0 || strcmp(name, "..") == 0)
+//         {
+//             entry = readdir(dir);
+//             continue;
+//         }
+//         std::string displayName = name;
+//         if (entry->d_type == DT_DIR)
+//         {
+//             displayName += "/";
+//         }
+//         html << "    <li><a href=\"" << name << "\">" << displayName << "</a></li>\n";
+//         entry = readdir(dir);
+//     }
+//     html << "  </ul>\n"
+//          << "</body>\n"
+//          << "</html>\n";
 
-    closedir(dir);
-    this->_responseBody = html.str() + CRLF;
-    std::string     lenght = "Content-Length: " + std::to_string(_responseBody.size()) + CRLF;
-    this->_responseHeaders += lenght;
-    this->finalResponse += this->_responseStartLine + this->_responseHeaders + CRLF + this->_responseBody + CRLF;
-    sendResponseToClient();
-}
+//     closedir(dir);
+//     this->_responseBody = html.str() + CRLF;
+//     std::string     lenght = "Content-Length: " + std::to_string(_responseBody.size()) + CRLF;
+//     this->_responseHeaders += lenght;
+//     this->finalResponse += this->_responseStartLine + this->_responseHeaders + CRLF + this->_responseBody + CRLF;
+//     sendResponseToClient();
+// }
 
 /*This Function called To Handlle The AutoIndexing Serving To list Directories
     Content*/
-void    ClientRequest::autoIndexingServing(bool     autoIndexStatus, const  std::string&    filePath)
-{
-    if(autoIndexStatus == true)
-        generateAutoindexPage(filePath);
-    else
-    {
-        HandlErr    noPermession(this, 403);
-    }
-}
+// void    ClientRequest::autoIndexingServing(bool     autoIndexStatus, const  std::string&    filePath)
+// {
+//     if(autoIndexStatus == true)
+//         generateAutoindexPage(filePath);
+//     else
+//     {
+//         HandlErr    noPermession(this, 403);
+//     }
+// }
 /*This Methode Responsible of handlling The Response When The requested
     URL is a Directory
     The methode handlle Both cases (Matching Block and No Matching Block)
@@ -434,36 +421,36 @@ void    ClientRequest::HandlDirectories(const  std::string&    filePath, const L
     }
 }
 
-/*Thid Methode Return The Position of The Closest Matching Prefix 
-    To The requested Path*/
-int     ClientRequest::getClosestMatchingPrefix(std::vector<LocationConfig>    locations) 
-{
-    std::string requested_path = this->clinentInfos.clientSourceReq;
-    std::string location_path;
-    int     bestMatchPos = -1;
-    int     pos = 0;
-    int     longMathcLenght = -1;
-    for (std::vector<LocationConfig>::const_iterator it = locations.begin() ; it != locations.end() ; it++)
-    {
-       location_path = it->path;
-       if (location_path == requested_path)
-        {   
-            this->clinentInfos.LocalisationName = it->path;
-            return (pos);
-        }
-        if(requested_path.rfind(location_path, 0) == 0) // The location Path mmatch
-        {
-            if(static_cast<int>(location_path.length()) > longMathcLenght)
-            {
-                longMathcLenght = location_path.length();
-                bestMatchPos = pos;
-                this->clinentInfos.LocalisationName = it->path;
-            }
-        }
-        pos++;
-    }
-    return (bestMatchPos);
-}
+// /*Thid Methode Return The Position of The Closest Matching Prefix 
+//     To The requested Path*/
+// int     ClientRequest::getClosestMatchingPrefix(std::vector<LocationConfig>    locations) 
+// {
+//     std::string requested_path = this->clinentInfos.clientSourceReq;
+//     std::string location_path;
+//     int     bestMatchPos = -1;
+//     int     pos = 0;
+//     int     longMathcLenght = -1;
+//     for (std::vector<LocationConfig>::const_iterator it = locations.begin() ; it != locations.end() ; it++)
+//     {
+//        location_path = it->path;
+//        if (location_path == requested_path)
+//         {   
+//             this->clinentInfos.LocalisationName = it->path;
+//             return (pos);
+//         }
+//         if(requested_path.rfind(location_path, 0) == 0) // The location Path mmatch
+//         {
+//             if(static_cast<int>(location_path.length()) > longMathcLenght)
+//             {
+//                 longMathcLenght = location_path.length();
+//                 bestMatchPos = pos;
+//                 this->clinentInfos.LocalisationName = it->path;
+//             }
+//         }
+//         pos++;
+//     }
+//     return (bestMatchPos);
+// }
 
 /*This Methode Return The state of a PATH
     -1 : if not founded ;
