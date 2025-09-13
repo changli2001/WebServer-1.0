@@ -85,7 +85,7 @@ class   HttpServer {
         std::string returnStatusPageHTML(unsigned short error) const; /*Return default HTML for error codes*/
 
         // ----- Response -----
-        std::string genreateResponse();
+        std::string generateResponse();
 
 
         // ----- Error Handling Methodes -----

@@ -90,14 +90,16 @@ void         HttpServer::CheckReadableClients(fd_set  *MonitoredClients)
             }
             if(clientObj->getParseState() == BADREQUEST)
             {
-                // Always generate a 400 Bad Request response for this client
                 finalResponse = generateErrorResponse(400, getServerConfigByClientFD(client_fd));
                 clientObj->setState(WRITESTATE);
                 clientObj->setfinalResponse(finalResponse);
             }
+            else if(clientObj->getParseState() == VALIDREQUEST)
+            {
+                
+            }
         }
     }
-    // Remove clients after iteration is complete
     for (size_t i = 0; i < clientsToRemove.size(); i++)
     {
         RemoveClient(clientsToRemove[i]);
@@ -119,13 +121,7 @@ void         HttpServer::CheckWriteableClients(fd_set  *MonitoredClients)
         {
             if (!clientObj->handleEchoWrite())
             {
-                std::cout << "Client " << client_fd << " echo write failed, disconnecting" << std::endl;
-                clientsToRemove.push_back(client_fd);
-            }
-            else
-            {
-                clientObj->setState(READSTATE);
-                std::cout << "Client " << client_fd << " echo sent, back to READSTATE" << std::endl;
+                clientsToRemove.push_back(client_fd); // All The request is Sent to the client or error
             }
         }
     }
@@ -182,33 +178,23 @@ void     HttpServer::CheckListeningSocket(fd_set  *MonitoredClients, int *remain
 void    HttpServer::RemoveClient(int clientFd)
 {
     std::cout << YELLOW << "[DEBUG] Removing client " << clientFd << RESET << std::endl;
-    
-    // Find the Client object first
     std::map<int, Client*>::iterator it = clients.find(clientFd);
-    if (it != clients.end()) {
-        delete it->second;  // Delete the Client object (this will close the FD in destructor)
-        clients.erase(it);  // Remove from map
+    if (it != clients.end())
+    {
+        delete it->second;
+        clients.erase(it);
         std::cout << YELLOW << "[DEBUG] Deleted Client object for fd " << clientFd << RESET << std::endl;
-    } else {
-        // If client not found in map, still try to close the FD
-        close(clientFd);
     }
-    
-    // Remove from client-to-listening-socket mapping
     std::map<int, int>::iterator mapping_it = clientToListeningSocket.find(clientFd);
-    if (mapping_it != clientToListeningSocket.end()) {
+    if (mapping_it != clientToListeningSocket.end())
+    {
         clientToListeningSocket.erase(mapping_it);
-        std::cout << YELLOW << "[DEBUG] Removed client-to-socket mapping for fd " << clientFd << RESET << std::endl;
     }
-    
-    std::cout << "[DEBUG] Client " << clientFd << " cleanup complete" << std::endl;
 }
 
-//eee
 /*Get ServerConfig by client FD - uses the client-to-listening-socket mapping*/
 ServerConfig* HttpServer::getServerConfigByClientFD(int clientFd)
 {
-    // Find which listening socket this client connected to
     std::map<int, int>::iterator it = clientToListeningSocket.find(clientFd);
     if (it != clientToListeningSocket.end())
     {
@@ -222,7 +208,6 @@ ServerConfig* HttpServer::getServerConfigByClientFD(int clientFd)
 /*Get ServerConfig by port number*/
 ServerConfig* HttpServer::getServerConfigByPort(int port)
 {
-    // Iterate through all server configurations to find matching port
     for (std::vector<ServerConfig>::iterator it = Servers.begin(); it != Servers.end(); ++it)
     {
         if (it->Port == port)
@@ -244,7 +229,6 @@ void    HttpServer::CheckTimeouts()
             timedOutClients.push_back(it->first);
         }
     }
-    // Remove timed-out clients
     for (size_t i = 0; i < timedOutClients.size(); i++)
     {
         std::cout << "[DEBUG] Client " << timedOutClients[i] << " has timed out, removing connection" << std::endl;

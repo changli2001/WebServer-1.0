@@ -12,6 +12,7 @@ Client::Client(int fd) : ClientFD(fd)
     responseStartLine = "";
     responseHeaders = "";
     responseBody = "";
+    bytesSent = 0;
     // Initialize default HTML page (from your ClientRequest.cpp)
     defaultHtmlPage =
         "<!DOCTYPE html>\n"
@@ -174,39 +175,11 @@ int     Client::parseRequest()
     return(0);
 }
 
-/*Check if headers are complete in tmpBuff and extract them*/
-bool Client::checkHeadersComplete()
-{
-    // Look for the end of headers marker: \r\n\r\n
-    size_t headers_end = tmpBuff.find("\r\n\r\n");
-    
-    if (headers_end != std::string::npos)
-    {
-        // Headers are complete - extract them (including the request line)
-        Headers = tmpBuff.substr(0, headers_end + 2); // Include the final \r\n but not the separator
-        // Update parsing state to indicate headers are parsed
-        currentParsingState = BODYPARSE;
-        // Call parseheaders method to process the extracted headers
-        parseheaders();
-        // Remove the headers part from tmpBuff, keeping the body part
-        tmpBuff = tmpBuff.substr(headers_end + 4); // Skip the \r\n\r\n
-        return true; // Headers are complete and extracted
-    }
-    // Headers are not yet complete
-    return false;
-}
 
-/*Enhanced HTTP request reading with proper buffering*/
-bool Client::readAndParseRequest()
-{
-
-    // For echo server, we'll use the echo methods instead
-    return false;
-}
-
-void Client::setfinalResponse(std::string   response)
+void Client::setfinalResponse(std::string response)
 {
     this->finalResponse = response;
+    this->bytesSent = 0;  // Reset counter when setting new response
 }
 
 /*Handle echo read - read data from client and store it*/
@@ -236,34 +209,51 @@ bool Client::readClientRequest()
 }
 
 
+
+/*Handle echo write - send echo response back to client*/
+bool Client::handleEchoWrite()
+{
+    if (finalResponse.empty()) {
+        std::cout << RED << "No response to send" << RESET << std::endl;
+        return false;
+    }
+
+    // Calculate remaining bytes to send
+    size_t remainingBytes = finalResponse.length() - bytesSent;
+    if (remainingBytes == 0) {
+        std::cout << GREEN << "All response data sent successfully - closing connection" << RESET << std::endl;
+        finalResponse.clear();
+        bytesSent = 0;
+        tmpBuff.clear();
+        return false;  // Signal to close connection
+    }
+
+    // Send remaining data
+    ssize_t bytes_sent = send(ClientFD, finalResponse.c_str() + bytesSent, remainingBytes, 0);
+    if (bytes_sent == -1)
+    {
+        std::cout << RED << "Failed to send response" << RESET << std::endl;
+        return false;
+    }
+    bytesSent += bytes_sent;
+    updateActivity();
+    std::cout << GREEN << "Sent " << bytes_sent << " bytes. Total: " << bytesSent << "/" << finalResponse.length() << RESET << std::endl;
+    // Check if all data has been sent
+    if (bytesSent >= finalResponse.length()) {
+        std::cout << GREEN << "Complete response sent successfully - closing connection" << RESET << std::endl;
+        finalResponse.clear();
+        bytesSent = 0;
+        tmpBuff.clear();
+        return false;
+    }
+    std::cout << YELLOW << "Partial send - " << (finalResponse.length() - bytesSent) << " bytes remaining" << RESET << std::endl;
+    return true;
+}
+
 // Destructor 
 Client::~Client()
 {
     if (ClientFD != -1) {
         close(ClientFD);
     }
-}
-
-/*Handle echo write - send echo response back to client*/
-bool Client::handleEchoWrite()
-{
-    // Simple echo response - just send back what we received
-    std::string response = this->finalResponse;
-    std::stringstream ss;
-    ss << response.length();
-    
-    ssize_t bytes_sent = send(ClientFD, response.c_str(), response.length(), 0);
-    if (bytes_sent == -1)
-    {
-        std::cout << RED << "Failed to send echo response" << RESET << std::endl;
-        return false;
-    }
-    
-    updateActivity();
-    std::cout << GREEN << "Echo response sent: " << bytes_sent << " bytes" << RESET << std::endl;
-    
-    // Clear the buffer after echoing
-    tmpBuff.clear();
-    
-    return true;
 }

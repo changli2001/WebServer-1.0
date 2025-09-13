@@ -67,6 +67,7 @@ class   Client{
         std::string           responseStartLine;
         std::string           responseHeaders;
         std::string           responseBody;
+        size_t                bytesSent;        // Track how many bytes have been sent
 
         //PARSING REQUEST
         bool                  REQUESTSTATE; // if the request is valid or not 
